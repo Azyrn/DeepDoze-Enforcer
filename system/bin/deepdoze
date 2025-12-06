@@ -1,0 +1,74 @@
+#!/system/bin/sh
+echo "DeepDoze Enforcer v1.1"
+echo "========================"
+echo ""
+
+case "$1" in
+    enable)
+        echo "Forcing deep sleep now..."
+        dumpsys deviceidle force-idle deep 2>/dev/null
+        echo "✅ Deep sleep forced"
+        ;;
+    
+    disable)
+        echo "Restoring normal operation..."
+        dumpsys deviceidle unforce 2>/dev/null
+        echo "✅ Normal operation restored"
+        ;;
+    
+    status)
+        echo "=== System Status ==="
+        echo ""
+        echo "📱 Screen: $(dumpsys power | grep -m1 'Display Power' | grep -o 'state=\w*' | cut -d= -f2)"
+        echo "🔋 Battery: $(dumpsys battery | grep level | cut -d: -f2 | tr -d ' ')%"
+        echo "💤 Doze State: $(dumpsys deviceidle get deep 2>/dev/null || echo 'Unknown')"
+        echo ""
+        
+        # Check last enforcement time
+        if [ -f "/data/adb/deepdoze/last_enforce" ]; then
+            LAST_TIME=$(stat -c %Y "/data/adb/deepdoze/last_enforce")
+            CURRENT_TIME=$(date +%s)
+            MINUTES_AGO=$(( (CURRENT_TIME - LAST_TIME) / 60 ))
+            echo "⏰ Last Doze enforcement: $MINUTES_AGO minutes ago"
+        fi
+        
+        # Show service status
+        if pgrep -f "service.sh" > /dev/null; then
+            echo "✅ Service: Running"
+        else
+            echo "⚠️ Service: Not running"
+        fi
+        ;;
+    
+    force)
+        echo "Forcing deep sleep and cleaning memory..."
+        dumpsys deviceidle force-idle deep 2>/dev/null
+        sync
+        echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
+        touch "/data/adb/deepdoze/last_enforce"
+        echo "✅ Complete"
+        ;;
+    
+    log)
+        if [ -f "/data/adb/deepdoze/service.log" ]; then
+            echo "=== Recent Logs ==="
+            tail -n ${2:-20} "/data/adb/deepdoze/service.log"
+        else
+            echo "No log file found"
+        fi
+        ;;
+    
+    *)
+        echo "Usage: deepdoze [command]"
+        echo ""
+        echo "Commands:"
+        echo "  enable    - Force deep sleep immediately"
+        echo "  disable   - Restore normal operation"
+        echo "  status    - Show detailed system status"
+        echo "  force     - Force deep sleep + memory clean"
+        echo "  log [n]   - Show last n log entries"
+        echo ""
+        echo "Note: Module works automatically in background"
+        echo "No configuration needed after installation"
+        ;;
+esac
