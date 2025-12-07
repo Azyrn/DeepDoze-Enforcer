@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# DeepDoze Enforcer v1.1 - Improved Main Service
+# DeepDoze Enforcer v1.3 - Improved Main Service
 # Re-enforce Doze every REFRESH_INTERVAL seconds when screen is off
 
 LOG_DIR="/data/adb/deepdoze"
