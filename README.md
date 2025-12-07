@@ -16,18 +16,3 @@ Features
 
   Works immediately - no setup needed
 
-  Simple CLI tool for control
-
-  Usage
-
-  After reboot, module works automatically. You can also use:
-  su
-deepdoze status    # Check status
-deepdoze force     # Force deep sleep now
-deepdoze log       # View logs
-
-Requirements
-
-    Root (Magisk 24+/KernelSU/APatch)
-
-    Android 6.0+
