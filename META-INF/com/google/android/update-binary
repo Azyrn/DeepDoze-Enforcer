@@ -9,7 +9,7 @@ ui_print() {
 
 ui_print " "
 ui_print "╔═══════════════════════════════════╗"
-ui_print "║   DeepDoze Enforcer v1.1         ║"
+ui_print "║   DeepDoze Enforcer v1.5         ║"
 ui_print "║   Automatic Battery Saver        ║"
 ui_print "╚═══════════════════════════════════╝"
 ui_print " "

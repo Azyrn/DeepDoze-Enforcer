@@ -1,4 +1,4 @@
-ui_print("DeepDoze Enforcer v1.1");
+ui_print("DeepDoze Enforcer v1.5");
 ui_print("Automatic battery saver - No setup needed");
 show_progress(0.500000, 0);
 ui_print("Extracting module files...");
