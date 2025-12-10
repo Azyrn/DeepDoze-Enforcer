@@ -3,16 +3,15 @@
 ![APatch](https://img.shields.io/badge/APatch-%E2%9C%93-4CAF50?style=for-the-badge)
 ![Android](https://img.shields.io/badge/Android-6.0%252B-3DDC84?logo=android&style=for-the-badge)
 # DeepDoze-Enforcer
-DeepDoze Enforcer  A Magisk module that forces your Android device into deep sleep to save battery. Works automatically after installation.
-Features
 
-    Forces deep sleep when screen is off
+Ultimate Battery Saver - Deep Sleep Enforcer with System Optimization
 
-  Re-applies doze every 20 minutes
+What It Does
+DeepDoze Enforcer is a Magisk module that aggressively optimizes your Android device for maximum battery life by:
 
-  Disables system tracing and logging
-
-  Protects messaging apps (WhatsApp, Telegram)
-
-  Works immediately - no setup needed
-
+Forces Deep Sleep: Keeps your device in deep sleep mode when the screen is off
+Restricts Background Apps: Prevents apps from running in the background and using wakelocks
+Optimizes Google Services: Reduces Google Mobile Services (GMS) battery drain
+Disables Bluetooth Profiles: Turns off unnecessary Bluetooth features
+Cleans Memory: Automatically drops caches to free up RAM
+Monitors System State: Continuously enforces optimizations every 20 minutes
