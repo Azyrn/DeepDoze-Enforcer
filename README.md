@@ -7,6 +7,7 @@
 Ultimate Battery Saver - Deep Sleep Enforcer with System Optimization
 
 What It Does
+---
 DeepDoze Enforcer is a Magisk module that aggressively optimizes your Android device for maximum battery life by:
 
 Forces Deep Sleep: Keeps your device in deep sleep mode when the screen is off
