@@ -1,0 +1,8 @@
+id=deepdoze_enforcer
+name=DeepDoze Enforcer
+version=1.6
+versionCode=16
+author=skeler
+description=Aggressive Doze enforcer with power hog & sleep preventer detection. Advanced battery optimization with auto-detection and system restrictions.
+support=
+minMagisk=24000

@@ -1,0 +1,98 @@
+#!/system/bin/sh
+# DeepDoze CLI - improved status checks and safer checks
+
+# Do not allow running this CLI from Termux user environment to avoid misleading output
+if [ -d "/data/data/com.termux" ] || [ -n "$TERMUX_VERSION" ]; then
+    echo "This CLI is not intended to be run from Termux. The module runs automatically on the device."
+    exit 1
+fi
+
+echo "DeepDoze Enforcer"
+echo "========================"
+echo ""
+
+# helper existence checks
+has() { command -v "$1" >/dev/null 2>&1; }
+
+get_screen_state() {
+    if has dumpsys; then
+        s=$(dumpsys power 2>/dev/null | grep -m1 -E 'Display|mWakefulness' | sed -E 's/.*(state|mWakefulness)=//; s/\s.*//')
+        [ -n "$s" ] && echo "$s" && return
+    fi
+    echo "Unknown"
+}
+
+case "$1" in
+    enable)
+        echo "Forcing deep sleep now..."
+        has dumpsys && dumpsys deviceidle force-idle deep 2>/dev/null || echo "dumpsys unavailable or failed"
+        echo "✅ Deep sleep forced"
+        ;;
+    disable)
+        echo "Restoring normal operation..."
+        has dumpsys && dumpsys deviceidle unforce 2>/dev/null || echo "dumpsys unavailable or failed"
+        echo "✅ Normal operation restored"
+        ;;
+    status)
+        echo "=== System Status ==="
+        echo ""
+        echo "📱 Screen: $(get_screen_state)"
+        if has dumpsys; then
+            batt=$(dumpsys battery 2>/dev/null | grep level | awk -F: '{print $2}' | tr -d ' ')
+            [ -n "$batt" ] && echo "🔋 Battery: ${batt}%"
+            # Doze state - best-effort
+            doze_state=$(dumpsys deviceidle 2>/dev/null | grep -m1 -i 'mState\|State:' || true)
+            echo "💤 Doze State: ${doze_state:-Unknown}"
+        fi
+        echo ""
+        # Last enforcement
+        if [ -f "/data/adb/deepdoze/last_enforce" ]; then
+            if read last < "/data/adb/deepdoze/last_enforce"; then
+                CURRENT_TIME=$(date +%s)
+                MINUTES_AGO=$(( (CURRENT_TIME - last) / 60 ))
+                echo "⏰ Last Doze enforcement: $MINUTES_AGO minutes ago"
+            fi
+        fi
+        # Service status using pidfile
+        if [ -f "/data/adb/deepdoze/service.pid" ]; then
+            pid=$(cat /data/adb/deepdoze/service.pid 2>/dev/null)
+            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                echo "✅ Service: Running (pid $pid)"
+            else
+                echo "⚠️ Service: Not running (stale pidfile)"
+            fi
+        else
+            echo "⚠️ Service: Not running"
+        fi
+        ;;
+    force)
+        echo "Forcing deep sleep and cleaning memory..."
+        has dumpsys && dumpsys deviceidle force-idle deep 2>/dev/null || echo "dumpsys unavailable or failed"
+        sync 2>/dev/null
+        if [ -w /proc/sys/vm/drop_caches ]; then
+            echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || echo "drop_caches failed"
+        fi
+        echo "$(date +%s)" > "/data/adb/deepdoze/last_enforce" 2>/dev/null || touch "/data/adb/deepdoze/last_enforce"
+        echo "✅ Complete"
+        ;;
+    log)
+        if [ -f "/data/adb/deepdoze/service.log" ]; then
+            echo "=== Recent Logs ==="
+            tail -n ${2:-20} "/data/adb/deepdoze/service.log"
+        else
+            echo "No log file found"
+        fi
+        ;;
+    *)
+        echo "Usage: deepdoze [command]"
+        echo ""
+        echo "Commands:"
+        echo "  enable    - Force deep sleep immediately"
+        echo "  disable   - Restore normal operation"
+        echo "  status    - Show detailed system status"
+        echo "  force     - Force deep sleep + memory clean"
+        echo "  log [n]   - Show last n log entries"
+        echo ""
+        echo "Note: Module works automatically in the background. Requires Magisk/root."
+        ;;
+esac
