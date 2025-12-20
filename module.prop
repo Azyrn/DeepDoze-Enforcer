@@ -1,7 +1,12 @@
 id=deepdoze_enforcer
 name=DeepDoze Enforcer
+<<<<<<< HEAD
 version=2.0
 versionCode=20
+=======
+version=2.1
+versionCode=21
+>>>>>>> 550706d (fix black screen)
 author=skeler
 description=Aggressive Doze enforcer with power hog & sleep preventer detection. Advanced battery optimization with auto-detection and system restrictions.
 support=

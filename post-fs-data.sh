@@ -10,6 +10,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] 🚀 DeepDoze Enforcer starting..." > "$LOG
 setprop persist.traced.enable 0 2>/dev/null
 setprop sys.trace.traced_started 0 2>/dev/null
 setprop debug.atrace.tags.enableflags 0 2>/dev/null
+<<<<<<< HEAD
 setprop debug.hwui.skia_tracing_enabled 0 2>/dev/null
 setprop debug.renderengine.skia_tracing_enabled 0 2>/dev/null
 setprop debug.tracing.ctl.hwui.skia_tracing_enabled 0 2>/dev/null
@@ -22,6 +23,20 @@ setprop debug.sf.latch_unsignaled 0 2>/dev/null
 setprop debug.stagefright.c2-poolmask 0 2>/dev/null
 setprop debug.stagefright.ccodec_delayed_params 0 2>/dev/null
 setprop sys.boot.debug_history 0 2>/dev/null
+=======
+# setprop debug.hwui.skia_tracing_enabled 0 2>/dev/null
+# setprop debug.renderengine.skia_tracing_enabled 0 2>/dev/null
+# setprop debug.tracing.ctl.hwui.skia_tracing_enabled 0 2>/dev/null
+# setprop debug.tracing.ctl.renderengine.skia_tracing_enabled 0 2>/dev/null
+# setprop graphics.gpu.profiler.support false 2>/dev/null
+# setprop debug.hwc.winupdate 0 2>/dev/null
+# setprop debug.perfmond.default.perfetto 0 2>/dev/null
+# setprop debug.sf.hw 0 2>/dev/null
+# setprop debug.sf.latch_unsignaled 0 2>/dev/null
+# setprop debug.stagefright.c2-poolmask 0 2>/dev/null
+# setprop debug.stagefright.ccodec_delayed_params 0 2>/dev/null
+# setprop sys.boot.debug_history 0 2>/dev/null
+>>>>>>> 550706d (fix black screen)
 
 # Stop tracing daemons
 stop traced 2>/dev/null || true
