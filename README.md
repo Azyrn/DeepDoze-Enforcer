@@ -20,4 +20,5 @@
 - Clears memory caches.
 - Resets DEX optimization.
 - Removes app preferred activities.
-telegram: https://t.me/+k2Tg01Wb6qtlNmE8
+-
+- telegram: https://t.me/+k2Tg01Wb6qtlNmE8
