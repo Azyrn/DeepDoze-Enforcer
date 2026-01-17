@@ -1,0 +1,8 @@
+id=deepdoze_enforcer
+name=DeepDoze Enforcer
+version=3.0
+versionCode=30
+author=skeler
+description=Ultimate battery saver. Nuclear Doze enforcement with wakelock killer, network lockdown, job crusher, alarm nuker, location control, sensor freeze, and aggressive GMS optimization. Works on all phones.
+support=
+minMagisk=24000
