@@ -306,6 +306,13 @@ kill_location() {
 
     log "📍 Location Assassin executing..."
 
+    # Check current location mode - respect user's setting if disabled
+    current_location_mode=$(settings get secure location_mode 2>/dev/null)
+    if [ "$current_location_mode" = "0" ]; then
+        log "  ℹ️ Location already disabled by user - skipping"
+        return
+    fi
+
     # Set location mode to battery saving (network only, no GPS)
     settings put secure location_mode 2 2>/dev/null
 
@@ -574,6 +581,10 @@ get_screen_state() {
 # ============================================================================
 
 previous_screen_state=""
+user_sync_enabled=""
+
+# Capture user's sync preference at start
+user_sync_enabled=$(settings get global sync_enabled 2>/dev/null)
 
 while true; do
     screen_state=$(get_screen_state)
@@ -585,6 +596,13 @@ while true; do
     elif [ "$screen_state" = "OFF" ]; then
         # Screen still off - periodic maintenance
         run_periodic_maintenance
+    elif [ "$screen_state" = "ON" ] && [ "$previous_screen_state" = "OFF" ]; then
+        # Screen just turned on - restore network if user had sync enabled
+        log "📱 Screen ON - restoring user settings"
+        if [ "$user_sync_enabled" = "1" ]; then
+            settings put global sync_enabled 1 2>/dev/null
+            log "  ✓ Sync restored"
+        fi
     fi
 
     previous_screen_state="$screen_state"

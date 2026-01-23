@@ -64,9 +64,8 @@ log "  ✓ Doze constants set"
 
 log "⚙️ Enabling power save features..."
 
-# Enable battery saver features
-settings put global low_power 1 2>/dev/null
-settings put global low_power_sticky 1 2>/dev/null
+# Respect user's battery saver preference - only enable adaptive features
+# Removed: low_power and low_power_sticky (overrides user preference)
 settings put global automatic_power_save_mode 1 2>/dev/null
 
 # App standby
@@ -78,7 +77,7 @@ settings put global app_auto_restriction_enabled true 2>/dev/null
 settings put global adaptive_battery_management_enabled 1 2>/dev/null
 settings put secure adaptive_sleep 0 2>/dev/null
 
-log "  ✓ Power save enabled"
+log "  ✓ Power save features enabled (respecting user preference)"
 
 # ============================================================================
 # NETWORK & CONNECTIVITY SAVINGS
@@ -97,14 +96,13 @@ settings put global network_scoring_ui_enabled 0 2>/dev/null
 settings put global network_recommendations_enabled 0 2>/dev/null
 settings put global network_avoid_bad_wifi 0 2>/dev/null
 
-# Captive portal - disable (saves battery on WiFi)
-settings put global captive_portal_mode 0 2>/dev/null
-settings put global captive_portal_detection_enabled 0 2>/dev/null
+# Captive portal - KEEP ENABLED (required for WiFi login pages at hotels, airports, etc.)
+# Removed: captive_portal_mode and captive_portal_detection_enabled
 
 # Mobile data savings
 settings put global mobile_data_always_on 0 2>/dev/null
 
-log "  ✓ Network savings configured"
+log "  ✓ Network savings configured (captive portal preserved)"
 
 # ============================================================================
 # DISPLAY & ANIMATION SAVINGS
@@ -112,23 +110,18 @@ log "  ✓ Network savings configured"
 
 log "⚙️ Configuring display savings..."
 
-# Reduce animation overhead
-settings put global window_animation_scale 0.5 2>/dev/null
-settings put global transition_animation_scale 0.5 2>/dev/null
-settings put global animator_duration_scale 0.5 2>/dev/null
+# Animation settings - REMOVED (user preference, no battery impact when screen off)
+# Removed: window_animation_scale, transition_animation_scale, animator_duration_scale
 
 # Display optimizations
 settings put global stay_on_while_plugged_in 0 2>/dev/null
-settings put system screen_off_timeout 30000 2>/dev/null
+# Removed: screen_off_timeout (user preference)
 
-# Disable always-on display features that drain battery
-settings put secure doze_always_on 0 2>/dev/null
-settings put secure doze_pick_up_gesture 0 2>/dev/null
-settings put secure doze_pulse_on_pick_up 0 2>/dev/null
-settings put secure doze_tap_gesture 0 2>/dev/null
-settings put secure doze_double_tap_gesture 0 2>/dev/null
+# AOD/gesture settings - REMOVED (user preference, OLED AOD uses minimal power)
+# Removed: doze_always_on, doze_pick_up_gesture, doze_pulse_on_pick_up, doze_tap_gesture, doze_double_tap_gesture
+# Note: These can be re-added to config file if user wants to disable them
 
-log "  ✓ Display savings configured"
+log "  ✓ Display savings configured (user preferences preserved)"
 
 # ============================================================================
 # LOCATION SAVINGS
@@ -136,10 +129,17 @@ log "  ✓ Display savings configured"
 
 log "⚙️ Configuring location savings..."
 
-# Battery saving location mode (2 = battery saving, 3 = high accuracy)
-settings put secure location_mode 2 2>/dev/null
+# Respect user's location setting - only optimize if location is ON
+current_location_mode=$(settings get secure location_mode 2>/dev/null)
+if [ "$current_location_mode" = "0" ]; then
+    log "  ℹ️ Location disabled by user - skipping"
+else
+    # Battery saving location mode (2 = battery saving)
+    settings put secure location_mode 2 2>/dev/null
+    log "  ✓ Location set to battery saving mode"
+fi
 
-# Disable background location for accuracy
+# Disable background location for accuracy (applies regardless)
 settings put global location_background_throttle_interval_ms 600000 2>/dev/null
 settings put global location_background_throttle_proximity_alert_interval_ms 600000 2>/dev/null
 
@@ -172,13 +172,19 @@ log "  ✓ GMS restricted"
 
 log "⚙️ Configuring sync restrictions..."
 
-# Disable auto sync at boot (user can enable if needed)
-settings put global sync_enabled 0 2>/dev/null
+# Respect user's sync setting - only disable if not explicitly enabled
+current_sync=$(settings get global sync_enabled 2>/dev/null)
+if [ "$current_sync" = "1" ]; then
+    log "  ℹ️ Sync enabled by user - preserving setting"
+else
+    settings put global sync_enabled 0 2>/dev/null
+    log "  ✓ Sync disabled"
+fi
 
-# Background data restriction
-cmd netpolicy set restrict-background true 2>/dev/null
+# Background data restriction (applies during screen-off via service.sh)
+# Note: restrict-background is managed dynamically by service.sh
 
-log "  ✓ Sync restrictions set"
+log "  ✓ Sync restrictions configured (respecting user preference)"
 
 # ============================================================================
 # SENSOR OPTIMIZATIONS
@@ -234,9 +240,9 @@ log "✅ DeepDoze Enforcer v3.0 initialization complete"
 log "═══════════════════════════════════════════"
 log "📊 Settings applied:"
 log "   - Doze: NUCLEAR"
-log "   - Power Save: ENABLED"
+log "   - Power Save: ADAPTIVE (respects user)"
 log "   - Network Scanning: DISABLED"
-log "   - Location Mode: BATTERY SAVING"
-log "   - Sync: DISABLED"
-log "   - Animations: REDUCED"
+log "   - Location: RESPECTS USER SETTING"
+log "   - Sync: RESPECTS USER SETTING"
+log "   - Animations: USER PREFERENCE"
 log "═══════════════════════════════════════════"
