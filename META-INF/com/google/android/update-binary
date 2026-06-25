@@ -1,26 +1,37 @@
 #!/sbin/sh
+
+umask 022
+
+ui_print() { echo "$1"; }
+
+require_new_magisk() {
+  ui_print "*******************************"
+  ui_print " Please install Magisk v24.0+ "
+  ui_print "*******************************"
+  exit 1
+}
+
 OUTFD=$2
 ZIPFILE=$3
 
-ui_print() {
-  echo -n -e "ui_print $1\n" >> /proc/self/fd/$OUTFD
-  echo -n -e "ui_print\n" >> /proc/self/fd/$OUTFD
-}
+mount /data 2>/dev/null
 
-ui_print " "
-ui_print "╔═══════════════════════════════════╗"
-ui_print "║   DeepDoze Enforcer v1.5         ║"
-ui_print "║   Automatic Battery Saver        ║"
-ui_print "╚═══════════════════════════════════╝"
-ui_print " "
+if [ -f /data/adb/magisk/util_functions.sh ]; then
+  . /data/adb/magisk/util_functions.sh
+  install_module
+  exit 0
+fi
 
-unzip -o "$ZIPFILE" -x 'META-INF/*' -d $MODPATH >&2
+if [ -f /data/adb/ksu/bin/util_functions.sh ]; then
+  . /data/adb/ksu/bin/util_functions.sh
+  install_module
+  exit 0
+fi
 
-set_perm_recursive $MODPATH 0 0 0755 0644
-set_perm_recursive $MODPATH/system/bin 0 0 0755 0755
+if [ -f /data/adb/ap/bin/util_functions.sh ]; then
+  . /data/adb/ap/bin/util_functions.sh
+  install_module
+  exit 0
+fi
 
-ui_print "✅ Installation complete"
-ui_print "📱 Module will work automatically"
-ui_print "🔋 Battery savings start after reboot"
-
-exit 0
+require_new_magisk

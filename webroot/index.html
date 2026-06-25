@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>DeepDoze Enforcer</title>
+<style>
+  :root {
+    --fg: #f3f4f6;
+    --muted: #9aa0aa;
+    --line: rgba(255,255,255,0.08);
+    --panel: rgba(255,255,255,0.04);
+    --panel-press: rgba(255,255,255,0.10);
+    --ok: #4ade80;
+    --off: #f87171;
+    --accent: #e5e7eb;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: #0b0d10; color: var(--fg); }
+  body {
+    font-family: system-ui, -apple-system, "Roboto", "Segoe UI", sans-serif;
+    padding: 18px 16px 48px;
+    max-width: 640px;
+    margin: 0 auto;
+    line-height: 1.45;
+  }
+
+  .hero {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+    margin-bottom: 22px;
+  }
+  .hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .hero .cap {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 18px;
+    background: linear-gradient(to top, rgba(11,13,16,0.85), rgba(11,13,16,0));
+  }
+  .hero h1 { margin: 0; font-size: 24px; font-weight: 650; letter-spacing: 0.2px; }
+  .hero .sub { color: #d1d5db; font-size: 13px; margin-top: 2px; }
+  .ver {
+    display: inline-block; margin-top: 10px;
+    font-size: 11px; letter-spacing: 0.5px;
+    padding: 3px 9px; border-radius: 999px;
+    background: rgba(255,255,255,0.14); color: #fff;
+  }
+
+  section { margin-bottom: 18px; }
+  .head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 0 4px 10px;
+  }
+  .head h2 {
+    margin: 0; font-size: 12px; font-weight: 600;
+    letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted);
+  }
+  .link {
+    font-size: 12px; color: var(--muted); background: none; border: none;
+    padding: 4px 6px; cursor: pointer;
+  }
+  .link:active { color: var(--fg); }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 16px;
+  }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row .k { color: var(--muted); font-size: 14px; }
+  .row .v { font-size: 14px; font-weight: 550; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
+  .dot.on { background: var(--ok); }
+  .dot.off { background: var(--off); }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  button.act {
+    font-family: inherit; font-size: 14px; font-weight: 550;
+    color: var(--fg);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 15px 12px;
+    cursor: pointer;
+    transition: background 0.12s ease;
+  }
+  button.act:active { background: var(--panel-press); }
+  button.act.primary { background: rgba(255,255,255,0.92); color: #0b0d10; border-color: transparent; }
+  button.act.primary:active { background: #fff; }
+
+  pre {
+    margin: 0;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+    font: 12px/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: var(--muted);
+    white-space: pre-wrap; word-break: break-word;
+    max-height: 200px; overflow-y: auto;
+  }
+
+  .foot { text-align: center; color: var(--muted); font-size: 11px; margin-top: 24px; }
+  .foot a { color: #d1d5db; text-decoration: none; }
+</style>
+</head>
+<body>
+  <div class="hero">
+    <img src="banner.jpg" alt="">
+    <div class="cap">
+      <h1>DeepDoze Enforcer</h1>
+      <div class="sub">Universal battery saver</div>
+      <span class="ver">v3.4</span>
+    </div>
+  </div>
+
+  <section>
+    <div class="head">
+      <h2>Status</h2>
+      <button class="link" id="refresh">Refresh</button>
+    </div>
+    <div class="panel">
+      <div class="row"><span class="k">Service</span><span class="v" id="svc">…</span></div>
+      <div class="row"><span class="k">Battery</span><span class="v" id="battery">—</span></div>
+      <div class="row"><span class="k">Doze state</span><span class="v" id="doze">—</span></div>
+      <div class="row"><span class="k">Last enforced</span><span class="v" id="last">—</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Controls</h2></div>
+    <div class="grid">
+      <button class="act primary" id="force">Force deep sleep</button>
+      <button class="act" id="restore">Restore normal</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Output</h2></div>
+    <pre id="out">Ready.</pre>
+  </section>
+
+  <div class="foot">DeepDoze Enforcer · Magisk / KernelSU / APatch<br><a href="https://t.me/necotinx" data-ext="https://t.me/necotinx">t.me/necotinx</a></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const out = $('out');
+
+  function exec(cmd) {
+    return new Promise((resolve) => {
+      if (typeof ksu === 'undefined' || typeof ksu.exec !== 'function') {
+        resolve({ errno: -1, stdout: '', stderr: 'Root shell not available (open in KernelSU/APatch/MMRL WebUI).' });
+        return;
+      }
+      const name = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 1e6);
+      window[name] = (errno, stdout, stderr) => {
+        delete window[name];
+        resolve({ errno, stdout: stdout || '', stderr: stderr || '' });
+      };
+      try {
+        ksu.exec(cmd, '{}', name);
+      } catch (e) {
+        delete window[name];
+        resolve({ errno: -1, stdout: '', stderr: String(e) });
+      }
+    });
+  }
+
+  function toast(msg) {
+    if (typeof ksu !== 'undefined' && typeof ksu.toast === 'function') ksu.toast(msg);
+  }
+
+  const STATUS_CMD = [
+    'D=/data/adb/deepdoze',
+    'S=stopped; if [ -f $D/service.pid ] && kill -0 "$(cat $D/service.pid 2>/dev/null)" 2>/dev/null; then S=running; fi',
+    'echo "svc=$S"',
+    "echo \"battery=$(dumpsys battery 2>/dev/null | grep -m1 ' level:' | grep -oE '[0-9]+')\"",
+    'echo "doze=$(dumpsys deviceidle get deep 2>/dev/null)"',
+    'echo "last=$(cat $D/last_enforce 2>/dev/null)"'
+  ].join('\n');
+
+  function parse(text) {
+    const o = {};
+    text.split('\n').forEach((l) => {
+      const i = l.indexOf('=');
+      if (i > 0) o[l.slice(0, i).trim()] = l.slice(i + 1).trim();
+    });
+    return o;
+  }
+
+  function ago(epoch) {
+    const n = parseInt(epoch, 10);
+    if (!n) return 'never';
+    const m = Math.floor((Date.now() / 1000 - n) / 60);
+    if (m < 1) return 'just now';
+    if (m < 60) return m + ' min ago';
+    const h = Math.floor(m / 60);
+    return h + 'h ' + (m % 60) + 'm ago';
+  }
+
+  async function refresh() {
+    const r = await exec(STATUS_CMD);
+    if (r.errno !== 0) {
+      $('svc').innerHTML = '<span class="dot off"></span>Unavailable';
+      if (r.stderr) out.textContent = r.stderr;
+      return;
+    }
+    const s = parse(r.stdout);
+    const running = s.svc === 'running';
+    $('svc').innerHTML = '<span class="dot ' + (running ? 'on' : 'off') + '"></span>' + (running ? 'Running' : 'Stopped');
+    $('battery').textContent = s.battery ? s.battery + '%' : '—';
+    $('doze').textContent = s.doze || '—';
+    $('last').textContent = ago(s.last);
+  }
+
+  async function action(cmd, label) {
+    out.textContent = label + ' …';
+    const r = await exec(cmd);
+    out.textContent = (r.stdout || r.stderr || 'Done.').trim() || 'Done.';
+    toast(label);
+    refresh();
+  }
+
+  function openExternal(url) {
+    if (!url) return;
+    exec('am start -a android.intent.action.VIEW -d ' + JSON.stringify(url) + ' >/dev/null 2>&1');
+    toast('Opening link');
+  }
+
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a');
+    if (!a) return;
+    e.preventDefault();
+    openExternal(a.getAttribute('data-ext') || a.getAttribute('href'));
+  });
+
+  const FORCE_CMD = [
+    'dumpsys deviceidle enable >/dev/null 2>&1',
+    'dumpsys deviceidle force-idle deep >/dev/null 2>&1',
+    'sync',
+    'date +%s > /data/adb/deepdoze/last_enforce 2>/dev/null',
+    'echo "Deep idle state: $(dumpsys deviceidle get deep 2>/dev/null)"',
+    'if dumpsys battery 2>/dev/null | grep -qiE "(AC|USB|Wireless) powered: true"; then echo "Note: device is charging - real deep sleep resumes once unplugged."; fi'
+  ].join('\n');
+
+  $('refresh').onclick = refresh;
+  $('force').onclick = () => action(FORCE_CMD, 'Force deep sleep');
+  $('restore').onclick = () => action(
+    'dumpsys deviceidle unforce >/dev/null 2>&1; echo "Restored normal idle behaviour."',
+    'Restore normal'
+  );
+
+  refresh();
+</script>
+</body>
+</html>

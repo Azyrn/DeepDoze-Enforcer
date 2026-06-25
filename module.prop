@@ -1,8 +1,12 @@
 id=deepdoze_enforcer
 name=DeepDoze Enforcer
-version=3.1
-versionCode=31
+version=v3.4
+versionCode=34
 author=skeler
-description=Ultimate battery saver that respects user preferences. Nuclear Doze enforcement with wakelock killer, network lockdown, job crusher, alarm nuker, location control, sensor freeze, and aggressive GMS optimization. Works on all phones.
-support=
+description=Longer battery life — deep-sleeps your phone when the screen is off and stops apps draining power, while keeping your alarms, calls and messages working. For Magisk, KernelSU and APatch.
 minMagisk=24000
+minKsu=10000
+minApi=26
+banner=banner.png
+webuiIcon=icon.png
+actionIcon=icon.png
