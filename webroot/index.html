@@ -13,13 +13,17 @@
     --panel-press: rgba(255,255,255,0.10);
     --ok: #4ade80;
     --off: #f87171;
+    --warn: #fbbf24;
     --accent: #e5e7eb;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: #0b0d10; color: var(--fg); }
   body {
     font-family: system-ui, -apple-system, "Roboto", "Segoe UI", sans-serif;
-    padding: 18px 16px 48px;
+    padding: max(env(safe-area-inset-top, 0px), 40px)
+             calc(16px + env(safe-area-inset-right, 0px))
+             calc(48px + env(safe-area-inset-bottom, 0px))
+             calc(16px + env(safe-area-inset-left, 0px));
     max-width: 640px;
     margin: 0 auto;
     line-height: 1.45;
@@ -69,17 +73,19 @@
     overflow: hidden;
   }
   .row {
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
     padding: 13px 16px;
   }
   .row + .row { border-top: 1px solid var(--line); }
   .row .k { color: var(--muted); font-size: 14px; }
-  .row .v { font-size: 14px; font-weight: 550; }
+  .row .v { font-size: 14px; font-weight: 550; text-align: right; }
+  .row .v small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; margin-top: 1px; }
   .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
   .dot.on { background: var(--ok); }
   .dot.off { background: var(--off); }
+  .dot.idle { background: var(--muted); }
 
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
   button.act {
     font-family: inherit; font-size: 14px; font-weight: 550;
     color: var(--fg);
@@ -91,20 +97,53 @@
     transition: background 0.12s ease;
   }
   button.act:active { background: var(--panel-press); }
-  button.act.primary { background: rgba(255,255,255,0.92); color: #0b0d10; border-color: transparent; }
-  button.act.primary:active { background: #fff; }
+  button.act.mode.sel { background: rgba(255,255,255,0.92); color: #0b0d10; border-color: transparent; }
 
-  pre {
-    margin: 0;
-    background: rgba(0,0,0,0.35);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 14px 16px;
-    font: 12px/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-    color: var(--muted);
-    white-space: pre-wrap; word-break: break-word;
-    max-height: 200px; overflow-y: auto;
+  .hint { color: var(--muted); font-size: 12px; margin: 8px 4px 0; }
+
+  .search {
+    width: 100%; background: rgba(0,0,0,0.35); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 12px;
+    padding: 11px 14px; font-size: 14px; margin-bottom: 10px;
   }
+  .toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin: 0 4px 10px;
+  }
+  .toolbar label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--muted); cursor: pointer;
+  }
+  .toolbar input { width: 18px; height: 18px; accent-color: #000; }
+  .toolbar .count { font-size: 12px; color: var(--muted); }
+
+  .applist { max-height: 360px; overflow-y: auto; }
+  .approw { display: flex; align-items: center; gap: 10px; padding: 11px 14px; cursor: pointer; }
+  .approw + .approw { border-top: 1px solid var(--line); }
+  .approw .pk { flex: 1 1 auto; min-width: 0; font: 12px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace; word-break: break-all; }
+  .approw input { width: 20px; height: 20px; accent-color: #000; flex: 0 0 auto; }
+
+  .why { margin-top: 10px; }
+  .wrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 16px; }
+  .wrow + .wrow { border-top: 1px solid var(--line); }
+  .wrow .pk { font: 12px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace; word-break: break-all; }
+  .badge {
+    flex: 0 0 auto; font-size: 11px; font-weight: 550;
+    padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+    background: rgba(255,255,255,0.07); color: var(--muted);
+  }
+  .badge.live { background: rgba(74,222,128,0.14); color: var(--ok); }
+  .badge.deflt { background: rgba(255,255,255,0.10); color: #d1d5db; }
+  .badge.user { background: rgba(229,231,235,0.16); color: #fff; }
+
+  .events .ev { display: flex; align-items: flex-start; gap: 10px; padding: 12px 16px; }
+  .events .ev + .ev { border-top: 1px solid var(--line); }
+  .events .ev .ico { margin-top: 6px; flex: 0 0 auto; }
+  .events .ev .body { flex: 1 1 auto; min-width: 0; }
+  .events .ev .t { font-size: 14px; font-weight: 550; }
+  .events .ev .d { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .events .ev .when { font-size: 11px; color: var(--muted); white-space: nowrap; margin-left: 6px; }
+  .empty { padding: 16px; color: var(--muted); font-size: 13px; }
 
   .foot { text-align: center; color: var(--muted); font-size: 11px; margin-top: 24px; }
   .foot a { color: #d1d5db; text-decoration: none; }
@@ -115,8 +154,8 @@
     <img src="banner.jpg" alt="">
     <div class="cap">
       <h1>DeepDoze Enforcer</h1>
-      <div class="sub">Universal battery saver</div>
-      <span class="ver">v3.4</span>
+      <div class="sub">Longer battery, untouched experience</div>
+      <span class="ver">v3.4.1</span>
     </div>
   </div>
 
@@ -127,30 +166,74 @@
     </div>
     <div class="panel">
       <div class="row"><span class="k">Service</span><span class="v" id="svc">…</span></div>
+      <div class="row"><span class="k">Phone</span><span class="v" id="screen">—</span></div>
       <div class="row"><span class="k">Battery</span><span class="v" id="battery">—</span></div>
-      <div class="row"><span class="k">Doze state</span><span class="v" id="doze">—</span></div>
-      <div class="row"><span class="k">Last enforced</span><span class="v" id="last">—</span></div>
+      <div class="row"><span class="k">Sleep state</span><span class="v" id="doze">—</span></div>
     </div>
   </section>
 
   <section>
-    <div class="head"><h2>Controls</h2></div>
-    <div class="grid">
-      <button class="act primary" id="force">Force deep sleep</button>
-      <button class="act" id="restore">Restore normal</button>
+    <div class="head"><h2>Battery while asleep</h2></div>
+    <div class="panel">
+      <div class="row"><span class="k">Average drain</span><span class="v" id="avgma">—</span></div>
+      <div class="row"><span class="k">Estimated overnight</span><span class="v" id="overnight">—</span></div>
+      <div class="row"><span class="k">Best – worst</span><span class="v" id="range">—</span></div>
     </div>
   </section>
 
   <section>
-    <div class="head"><h2>Output</h2></div>
-    <pre id="out">Ready.</pre>
+    <div class="head"><h2>Restriction mode</h2></div>
+    <div class="grid3">
+      <button class="act mode" data-mode="gentle">Gentle</button>
+      <button class="act mode" data-mode="balanced">Balanced</button>
+      <button class="act mode" data-mode="aggressive">Aggressive</button>
+    </div>
+    <p class="hint" id="modehint">…</p>
+  </section>
+
+  <section>
+    <div class="head"><h2>Protected apps</h2></div>
+    <div class="panel">
+      <div class="row"><span class="k">Automatically protected</span><span class="v" id="autocount">—</span></div>
+      <div class="row"><span class="k">In your whitelist</span><span class="v" id="wlcount">—</span></div>
+      <div class="row"><span class="k">Restricted while asleep</span><span class="v" id="restricted">—</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Choose apps to protect</h2>
+      <button class="link" id="savewl">Save</button>
+    </div>
+    <input id="appsearch" class="search" placeholder="Search apps…" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div class="toolbar">
+      <label><input type="checkbox" id="systoggle"> Show system apps</label>
+      <span class="count" id="selcount">0 protected</span>
+    </div>
+    <div class="panel applist" id="applist"><div class="empty">Loading apps…</div></div>
+    <p class="hint">Checked apps are always kept awake while the screen is off. Apps in active use — music, calls, navigation, downloads — plus your dialer, SMS, clock and keyboard are protected automatically. Changes apply next time the screen turns off.</p>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Why an app is protected</h2>
+      <button class="link" id="whytoggle">Show</button>
+    </div>
+    <div class="why panel" id="whypanel" style="display:none"><div class="empty" id="whylist">Loading…</div></div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Recent activity</h2>
+      <button class="link" id="logtoggle">Show</button>
+    </div>
+    <div class="panel events" id="logview" style="display:none"><div class="empty">Loading…</div></div>
   </section>
 
   <div class="foot">DeepDoze Enforcer · Magisk / KernelSU / APatch<br><a href="https://t.me/necotinx" data-ext="https://t.me/necotinx">t.me/necotinx</a></div>
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const out = $('out');
 
   function exec(cmd) {
     return new Promise((resolve) => {
@@ -176,14 +259,48 @@
     if (typeof ksu !== 'undefined' && typeof ksu.toast === 'function') ksu.toast(msg);
   }
 
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  }
+
+  let APPS = { user: [], sys: [] };
+  let selected = new Set();
+  let excluded = new Set();
+  let REASONS = {};
+  let appsLoaded = false;
+
+  function isAuto(p) { return !!REASONS[p]; }
+  function isChecked(p) { return selected.has(p) || (isAuto(p) && !excluded.has(p)); }
+
   const STATUS_CMD = [
     'D=/data/adb/deepdoze',
     'S=stopped; if [ -f $D/service.pid ] && kill -0 "$(cat $D/service.pid 2>/dev/null)" 2>/dev/null; then S=running; fi',
     'echo "svc=$S"',
+    'echo "screen=$(dumpsys power 2>/dev/null | grep -m1 mWakefulness= | sed "s/.*mWakefulness=//;s/[^A-Za-z].*//")"',
     "echo \"battery=$(dumpsys battery 2>/dev/null | grep -m1 ' level:' | grep -oE '[0-9]+')\"",
     'echo "doze=$(dumpsys deviceidle get deep 2>/dev/null)"',
-    'echo "last=$(cat $D/last_enforce 2>/dev/null)"'
+    'read A B C < $D/draw_off 2>/dev/null; echo "avgma=$A"; echo "maxma=$B"; echo "minma=$C"',
+    'M=balanced; [ -f $D/config ] && M=$(grep -m1 "^mode=" $D/config 2>/dev/null | cut -d= -f2); echo "mode=${M:-balanced}"',
+    'RC=0; [ -f $D/restricted_pkgs ] && RC=$(grep -c . $D/restricted_pkgs 2>/dev/null); echo "restricted=$RC"',
+    'CAP=$(cat /sys/class/power_supply/battery/charge_full_design 2>/dev/null); [ -z "$CAP" ] && CAP=$(cat /sys/class/power_supply/battery/charge_full 2>/dev/null); echo "capuah=$CAP"',
+    "if [ -f $D/protected_reasons ]; then WLN=$(awk -F'\\t' '$2==\"Your whitelist\"{c++}END{print c+0}' $D/protected_reasons 2>/dev/null); ATN=$(awk -F'\\t' '$2!=\"Your whitelist\"{c++}END{print c+0}' $D/protected_reasons 2>/dev/null); else WLN=-1; ATN=-1; fi; echo \"wlcount=$WLN\"; echo \"autocount=$ATN\""
   ].join('\n');
+
+  const WL_CMD = 'cat /data/adb/deepdoze/whitelist 2>/dev/null';
+  const LOG_CMD = 'tail -n 20 /data/adb/deepdoze/service.log 2>/dev/null';
+  const WHY_CMD = 'cat /data/adb/deepdoze/protected_reasons 2>/dev/null';
+  const APPS_CMD = [
+    'echo "USER"',
+    'pm list packages -3 2>/dev/null | sed "s/^package://"',
+    'echo "SYS"',
+    'pm list packages -s 2>/dev/null | sed "s/^package://"'
+  ].join('\n');
+
+  const MODE_HINTS = {
+    gentle: 'Light: defers background jobs & sync for unused apps. Lowest risk.',
+    balanced: 'Recommended: restricts background run, network & jobs for unused apps.',
+    aggressive: 'Strongest: also force-stops idle apps. Some background updates may be delayed.'
+  };
 
   function parse(text) {
     const o = {};
@@ -194,37 +311,264 @@
     return o;
   }
 
-  function ago(epoch) {
-    const n = parseInt(epoch, 10);
-    if (!n) return 'never';
-    const m = Math.floor((Date.now() / 1000 - n) / 60);
+  function relative(secs) {
+    const m = Math.floor(secs / 60);
     if (m < 1) return 'just now';
     if (m < 60) return m + ' min ago';
     const h = Math.floor(m / 60);
-    return h + 'h ' + (m % 60) + 'm ago';
+    if (h < 24) return h + 'h ' + (m % 60) + 'm ago';
+    return Math.floor(h / 24) + 'd ago';
+  }
+
+  function mA(raw) {
+    const n = parseInt(raw, 10);
+    return n > 0 ? '~' + n + ' mA' : '—';
+  }
+
+  function sleepLabel(raw) {
+    const v = (raw || '').toUpperCase();
+    if (v.indexOf('IDLE_MAINTENANCE') >= 0) return 'Brief wake-up (maintenance)';
+    if (v.indexOf('IDLE') >= 0) return 'Deep sleep — saving battery';
+    if (v.indexOf('ACTIVE') >= 0) return 'Awake — not saving yet';
+    if (v.indexOf('INACTIVE') >= 0 || v.indexOf('SENSING') >= 0 ||
+        v.indexOf('LOCATING') >= 0 || v.indexOf('PENDING') >= 0) return 'Falling asleep…';
+    return raw || '—';
+  }
+
+  function capMah(capuah) {
+    const n = parseInt(capuah, 10);
+    if (!n || n <= 0) return 0;
+    return n > 100000 ? Math.round(n / 1000) : n;
+  }
+
+  function overnight(avg, cap) {
+    const a = parseInt(avg, 10);
+    if (!a || a <= 0) return '—';
+    if (cap > 0) {
+      const pct = Math.round((a * 8 / cap) * 100);
+      return '≈' + pct + '% <small>over 8h, screen off</small>';
+    }
+    return '≈' + (a * 8) + ' mAh <small>over 8h, screen off</small>';
   }
 
   async function refresh() {
     const r = await exec(STATUS_CMD);
     if (r.errno !== 0) {
       $('svc').innerHTML = '<span class="dot off"></span>Unavailable';
-      if (r.stderr) out.textContent = r.stderr;
       return;
     }
     const s = parse(r.stdout);
     const running = s.svc === 'running';
+    const screenOff = /Asleep|Dozing/i.test(s.screen || '');
+
     $('svc').innerHTML = '<span class="dot ' + (running ? 'on' : 'off') + '"></span>' + (running ? 'Running' : 'Stopped');
+    $('screen').textContent = s.screen ? (screenOff ? 'Screen off' : 'Screen on') : '—';
     $('battery').textContent = s.battery ? s.battery + '%' : '—';
-    $('doze').textContent = s.doze || '—';
-    $('last').textContent = ago(s.last);
+    $('doze').textContent = sleepLabel(s.doze);
+
+    const cap = capMah(s.capuah);
+    $('avgma').textContent = mA(s.avgma);
+    $('overnight').innerHTML = overnight(s.avgma, cap);
+    const lo = parseInt(s.minma, 10), hi = parseInt(s.maxma, 10);
+    $('range').textContent = (lo > 0 && hi > 0) ? '~' + lo + ' – ~' + hi + ' mA' : '—';
+
+    const auto = parseInt(s.autocount, 10);
+    const wl = parseInt(s.wlcount, 10);
+    $('autocount').textContent = auto >= 0 ? auto + ' apps' : 'After first sleep';
+    $('wlcount').textContent = wl >= 0 ? wl + ' apps' : selected.size + ' apps';
+    $('restricted').textContent = s.restricted !== undefined ? s.restricted + ' apps' : '—';
+
+    setModeUI((s.mode || 'balanced').toLowerCase());
   }
 
-  async function action(cmd, label) {
-    out.textContent = label + ' …';
+  function setModeUI(m) {
+    document.querySelectorAll('button.mode').forEach((b) => {
+      b.classList.toggle('sel', b.getAttribute('data-mode') === m);
+    });
+    $('modehint').textContent = MODE_HINTS[m] || '';
+  }
+
+  async function setMode(m) {
+    setModeUI(m);
+    const cmd = [
+      'D=/data/adb/deepdoze; mkdir -p $D',
+      't=$D/config.tmp',
+      '{ grep -v "^mode=" $D/config 2>/dev/null; echo "mode=' + m + '"; } > $t && mv $t $D/config'
+    ].join('\n');
+    await exec(cmd);
+    toast('Mode set to ' + m);
+  }
+
+  function parseAppList(stdout) {
+    APPS = { user: [], sys: [] };
+    let mode = null;
+    (stdout || '').split('\n').forEach((l) => {
+      l = l.trim();
+      if (!l) return;
+      if (l === 'USER') { mode = 'user'; return; }
+      if (l === 'SYS') { mode = 'sys'; return; }
+      if (mode === 'user') APPS.user.push(l);
+      else if (mode === 'sys') APPS.sys.push(l);
+    });
+  }
+
+  async function loadApps() {
+    const [a, w] = await Promise.all([exec(APPS_CMD), exec(WL_CMD)]);
+    parseAppList(a.stdout);
+    selected = new Set(
+      (w.stdout || '').split('\n').map((s) => s.trim()).filter((p) => p && p.charAt(0) !== '#')
+    );
+    appsLoaded = true;
+    renderApps();
+  }
+
+  async function reloadAppList() {
+    if (!appsLoaded) return;
+    const a = await exec(APPS_CMD);
+    parseAppList(a.stdout);
+    renderApps();
+  }
+
+  function updateSelCount() {
+    let n = selected.size;
+    Object.keys(REASONS).forEach((p) => { if (!selected.has(p) && !excluded.has(p)) n++; });
+    $('selcount').textContent = n + ' protected';
+  }
+
+  function renderApps() {
+    if (!appsLoaded) return;
+    const q = $('appsearch').value.trim().toLowerCase();
+    let list = APPS.user.slice();
+    if ($('systoggle').checked) list = list.concat(APPS.sys);
+    Object.keys(REASONS).forEach((p) => list.push(p));
+    selected.forEach((p) => list.push(p));
+    list = [...new Set(list)].sort();
+    if (q) list = list.filter((p) => p.toLowerCase().indexOf(q) >= 0);
+    if (!list.length) {
+      $('applist').innerHTML = '<div class="empty">No apps match.</div>';
+      updateSelCount();
+      return;
+    }
+    $('applist').innerHTML = list.map((p) => {
+      const checked = isChecked(p) ? ' checked' : '';
+      const reason = REASONS[p];
+      const badge = (reason && reason !== 'Your whitelist')
+        ? '<span class="badge live">' + esc(reason) + '</span>' : '';
+      return '<label class="approw"><span class="pk">' + esc(p) + '</span>' + badge +
+        '<input type="checkbox" data-pkg="' + esc(p) + '"' + checked + '></label>';
+    }).join('');
+    updateSelCount();
+  }
+
+  async function saveProtected() {
+    const text = [...selected].sort().join('\n');
+    const b64 = btoa(unescape(encodeURIComponent(text)));
+    const cmd = 'echo "' + b64 + '" | base64 -d > /data/adb/deepdoze/whitelist 2>/dev/null && echo ok';
     const r = await exec(cmd);
-    out.textContent = (r.stdout || r.stderr || 'Done.').trim() || 'Done.';
-    toast(label);
+    if ((r.stdout || '').trim() === 'ok') toast('Saved — applies next sleep');
+    else toast('Save failed');
     refresh();
+  }
+
+  const REASON_CLASS = {
+    'In use on screen': 'live',
+    'Playing media': 'live',
+    'Active background task': 'live',
+    'Default SMS app': 'deflt',
+    'Default phone app': 'deflt',
+    'Keyboard': 'deflt',
+    'Home launcher': 'deflt',
+    'Alarms & system': 'deflt',
+    'Your whitelist': 'user'
+  };
+  const REASON_ORDER = [
+    'In use on screen', 'Playing media', 'Active background task',
+    'Default phone app', 'Default SMS app', 'Keyboard', 'Home launcher',
+    'Alarms & system', 'Your whitelist'
+  ];
+
+  async function loadReasons() {
+    const r = await exec(WHY_CMD);
+    REASONS = {};
+    (r.stdout || '').split('\n').forEach((l) => {
+      const p = l.split('\t');
+      if (p.length >= 2 && p[0]) REASONS[p[0]] = p[1];
+    });
+    if ($('whypanel').style.display !== 'none') renderWhy();
+    renderApps();
+  }
+
+  function renderWhy() {
+    const rows = Object.keys(REASONS).map((p) => [p, REASONS[p]]);
+    if (!rows.length) {
+      $('whylist').className = 'empty';
+      $('whylist').textContent = 'Nothing recorded yet — fills in after the first screen-off cycle.';
+      return;
+    }
+    rows.sort((a, b) => {
+      const ia = REASON_ORDER.indexOf(a[1]), ib = REASON_ORDER.indexOf(b[1]);
+      if (ia !== ib) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      return a[0] < b[0] ? -1 : 1;
+    });
+    $('whylist').className = '';
+    $('whylist').innerHTML = rows.map((p) => {
+      const cls = REASON_CLASS[p[1]] || '';
+      return '<div class="wrow"><span class="pk">' + esc(p[0]) +
+        '</span><span class="badge ' + cls + '">' + esc(p[1]) + '</span></div>';
+    }).join('');
+  }
+
+  function cap(s) {
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  }
+
+  function formatEvent(line) {
+    const m = line.match(/^\[([^\]]+)\]\s*(.*)$/);
+    const when = m ? m[1] : '';
+    const msg = m ? m[2] : line;
+    let cls = 'idle', t = msg, d = '';
+
+    let mm;
+    if ((mm = msg.match(/service started.*mode=(\w+)/))) {
+      cls = 'on'; t = 'Sleep engine started'; d = cap(mm[1]) + ' mode · watching for screen-off';
+    } else if (/cpu throttled/.test(msg)) {
+      cls = 'on'; t = 'Entered deep sleep'; d = 'Screen off — power eased back to save battery';
+    } else if (/cpu restored/.test(msg)) {
+      cls = 'off'; t = 'Woke up'; d = 'Full performance restored';
+    } else if ((mm = msg.match(/restricted (\d+) apps.*mode=(\w+)/))) {
+      cls = 'on'; t = 'Paused ' + mm[1] + ' background app' + (mm[1] === '1' ? '' : 's');
+      d = cap(mm[2]) + ' mode · protected apps kept running';
+    } else if (/restored apps/.test(msg)) {
+      cls = 'off'; t = 'Resumed background apps'; d = 'Screen turned on';
+    }
+
+    let whenTxt = '';
+    if (when) {
+      const dt = new Date(when.replace(' ', 'T'));
+      whenTxt = isNaN(dt) ? when : relative((Date.now() - dt.getTime()) / 1000);
+    }
+    return '<div class="ev"><span class="dot ' + cls + ' ico"></span>' +
+      '<div class="body"><div class="t">' + esc(t) + '</div>' +
+      (d ? '<div class="d">' + esc(d) + '</div>' : '') + '</div>' +
+      (whenTxt ? '<span class="when">' + esc(whenTxt) + '</span>' : '') + '</div>';
+  }
+
+  async function loadLog() {
+    const r = await exec(LOG_CMD);
+    const lines = (r.stdout || '').split('\n').map((l) => l.trim()).filter(Boolean);
+    if (!lines.length) {
+      $('logview').innerHTML = '<div class="empty">No activity yet — events appear after the first sleep cycle.</div>';
+      return;
+    }
+    $('logview').innerHTML = lines.reverse().map(formatEvent).join('');
+  }
+
+  function toggleSection(panelId, btn, onShow) {
+    const panel = $(panelId);
+    const show = panel.style.display === 'none';
+    panel.style.display = show ? 'block' : 'none';
+    btn.textContent = show ? 'Hide' : 'Show';
+    if (show && onShow) onShow();
   }
 
   function openExternal(url) {
@@ -240,23 +584,37 @@
     openExternal(a.getAttribute('data-ext') || a.getAttribute('href'));
   });
 
-  const FORCE_CMD = [
-    'dumpsys deviceidle enable >/dev/null 2>&1',
-    'dumpsys deviceidle force-idle deep >/dev/null 2>&1',
-    'sync',
-    'date +%s > /data/adb/deepdoze/last_enforce 2>/dev/null',
-    'echo "Deep idle state: $(dumpsys deviceidle get deep 2>/dev/null)"',
-    'if dumpsys battery 2>/dev/null | grep -qiE "(AC|USB|Wireless) powered: true"; then echo "Note: device is charging - real deep sleep resumes once unplugged."; fi'
-  ].join('\n');
+  let searchTimer;
+  $('appsearch').addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(renderApps, 120);
+  });
+  $('systoggle').addEventListener('change', renderApps);
+  $('applist').addEventListener('change', (e) => {
+    const cb = e.target;
+    if (cb.type !== 'checkbox') return;
+    const p = cb.getAttribute('data-pkg');
+    if (cb.checked) {
+      selected.add(p);
+      excluded.delete(p);
+    } else {
+      selected.delete(p);
+      if (isAuto(p)) excluded.add(p);
+    }
+    updateSelCount();
+  });
 
-  $('refresh').onclick = refresh;
-  $('force').onclick = () => action(FORCE_CMD, 'Force deep sleep');
-  $('restore').onclick = () => action(
-    'dumpsys deviceidle unforce >/dev/null 2>&1; echo "Restored normal idle behaviour."',
-    'Restore normal'
-  );
+  $('refresh').onclick = () => { refresh(); loadReasons(); reloadAppList(); };
+  $('savewl').onclick = saveProtected;
+  $('whytoggle').onclick = () => toggleSection('whypanel', $('whytoggle'), renderWhy);
+  $('logtoggle').onclick = () => toggleSection('logview', $('logtoggle'), loadLog);
+  document.querySelectorAll('button.mode').forEach((b) => {
+    b.onclick = () => setMode(b.getAttribute('data-mode'));
+  });
 
   refresh();
+  loadReasons();
+  loadApps();
 </script>
 </body>
 </html>
