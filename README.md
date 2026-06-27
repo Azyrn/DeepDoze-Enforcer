@@ -49,16 +49,6 @@ A config file is generated on first boot at:
 
 Edit it to change the mode (`gentle` / `balanced` / `aggressive`, or `off` to disable app restrictions) or to toggle features such as `enable_cpu_throttle` and `enable_force_doze`, then reboot. The whitelist is a separate file with one package per line at `/data/adb/deepdoze/whitelist`.
 
-## Command line
-
-```
-deepdoze status     Show service, screen, battery and Doze state
-deepdoze force      Force deep sleep and clean memory now
-deepdoze enable     Force deep sleep
-deepdoze disable    Restore normal operation
-deepdoze log [n]    Show the last n log lines
-```
-
 ## WebUI
 
 Open the module in the **KernelSU** or **APatch** manager (or MMRL) to view the live status dashboard and control panel.
