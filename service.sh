@@ -3,11 +3,14 @@
 LOG_DIR="/data/adb/deepdoze"
 LOG_FILE="$LOG_DIR/service.log"
 PIDFILE="$LOG_DIR/service.pid"
+LOCKDIR="$LOG_DIR/service.lock"
 CONFIG_FILE="$LOG_DIR/config"
 WHITELIST_FILE="$LOG_DIR/whitelist"
 RESTRICTED_FILE="$LOG_DIR/restricted_pkgs"
+RESTORE_FLAG="$LOG_DIR/needs_restore"
 PROTECTED_FILE="$LOG_DIR/protected_last"
 REASONS_FILE="$LOG_DIR/protected_reasons"
+SEED_MARKER="$LOG_DIR/seeded"
 CPU_BASE="/sys/devices/system/cpu"
 CPU_STATE_DIR="$LOG_DIR/cpu_state"
 DRAW_FILE="$LOG_DIR/draw_off"
@@ -20,6 +23,8 @@ enable_force_doze=true
 screen_off_governor=powersave
 screen_off_max_freq_khz=0
 screen_poll=2
+screen_off_poll=20
+doze_refire_cycles=6
 
 ESSENTIALS="com.google.android.deskclock com.android.deskclock com.sec.android.app.clockpackage com.oneplus.deskclock com.coloros.alarmclock com.miui.clock com.android.alarmclock com.oppo.alarmclock com.transsion.deskclock com.topjohnwu.magisk me.weishu.kernelsu me.bmax.apatch"
 
@@ -38,13 +43,25 @@ log() {
 
 has() { command -v "$1" >/dev/null 2>&1; }
 
-[ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE" 2>/dev/null
+load_config() {
+    [ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE" 2>/dev/null
+    case "$screen_poll" in
+        ""|*[!0-9]*) screen_poll=2 ;;
+        *) [ "$screen_poll" -lt 1 ] && screen_poll=2 ;;
+    esac
+    case "$screen_off_poll" in
+        ""|*[!0-9]*) screen_off_poll=20 ;;
+        *) [ "$screen_off_poll" -lt 1 ] && screen_off_poll=20 ;;
+    esac
+}
 
-if [ -f "$PIDFILE" ]; then
+load_config
+
+if ! mkdir "$LOCKDIR" 2>/dev/null; then
     oldpid=$(cat "$PIDFILE" 2>/dev/null)
-    if [ -n "$oldpid" ] && kill -0 "$oldpid" 2>/dev/null; then
-        exit 0
-    fi
+    [ -n "$oldpid" ] && kill -0 "$oldpid" 2>/dev/null && exit 0
+    rmdir "$LOCKDIR" 2>/dev/null
+    mkdir "$LOCKDIR" 2>/dev/null || exit 0
 fi
 echo $$ >"$PIDFILE"
 
@@ -97,7 +114,7 @@ cpu_lower() {
         fi
         applied=1
     done
-    [ "$applied" = 1 ] && { cpu_lowered=1; log "screen off: cpu throttled"; }
+    [ "$applied" = 1 ] && { cpu_lowered=1; log "locked: cpu throttled"; }
 }
 
 cpu_restore() {
@@ -118,7 +135,7 @@ cpu_restore() {
     done
     rm -f "$CPU_STATE_DIR"/*.max "$CPU_STATE_DIR"/*.gov 2>/dev/null
     cpu_lowered=0
-    log "screen on: cpu restored"
+    log "unlocked: cpu restored"
 }
 
 foreground_pkg() {
@@ -127,59 +144,40 @@ foreground_pkg() {
         | grep -oE '[a-zA-Z0-9_]+\.[a-zA-Z0-9._]+/' | head -1 | tr -d /
 }
 
-fgs_pkgs() {
-    dumpsys activity services 2>/dev/null | awk '
-        /ServiceRecord\{/ {
-            pkg=""
-            if (match($0, / u[0-9]+ [a-zA-Z0-9_.]+\//)) {
-                s=substr($0, RSTART, RLENGTH)
-                sub(/ u[0-9]+ /, "", s)
-                sub(/\/.*/, "", s)
-                pkg=s
-            }
-        }
-        /isForeground=true/ { if (pkg != "") { print pkg; pkg="" } }
-    '
-}
-
-media_pkgs() {
-    dumpsys media_session 2>/dev/null | awk '
-        /package=/ { p=$0; sub(/.*package=/, "", p); sub(/[^a-zA-Z0-9_.].*/, "", p); pkg=p }
-        /state=3/  { if (pkg != "") { print pkg; pkg="" } }
-    '
-}
-
-emit_reasons() {
-    fp=$(foreground_pkg)
-    [ -n "$fp" ] && printf '%s\tIn use on screen\n' "$fp"
-    media_pkgs | while read -r p; do
-        [ -n "$p" ] && printf '%s\tPlaying media\n' "$p"
-    done
-    fgs_pkgs | while read -r p; do
-        [ -n "$p" ] && printf '%s\tActive background task\n' "$p"
-    done
-    sms=$(settings get secure sms_default_application 2>/dev/null)
-    [ -n "$sms" ] && [ "$sms" != null ] && printf '%s\tDefault SMS app\n' "$sms"
-    dialer=$(cmd telecom get-default-dialer 2>/dev/null)
-    [ -n "$dialer" ] && printf '%s\tDefault phone app\n' "$dialer"
-    ime=$(settings get secure default_input_method 2>/dev/null | sed 's#/.*##')
-    [ -n "$ime" ] && [ "$ime" != null ] && printf '%s\tKeyboard\n' "$ime"
-    home=$(cmd package resolve-activity --brief -c android.intent.category.HOME 2>/dev/null | grep / | tail -1 | sed 's#/.*##')
-    [ -n "$home" ] && printf '%s\tHome launcher\n' "$home"
-    if [ -f "$WHITELIST_FILE" ]; then
-        grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$WHITELIST_FILE" | while read -r p; do
-            printf '%s\tYour whitelist\n' "$p"
-        done
-    fi
-    for p in $ESSENTIALS; do printf '%s\tAlarms & system\n' "$p"; done
-}
-
 build_protected() {
-    emit_reasons 2>/dev/null \
-        | awk -F'\t' '{ gsub(/[[:space:]]/,"",$1) } $1 ~ /^[a-zA-Z][a-zA-Z0-9_.]+$/ && $2 != "" { if (!seen[$1]++) print $1"\t"$2 }' \
-        >"$REASONS_FILE.tmp" 2>/dev/null
-    mv "$REASONS_FILE.tmp" "$REASONS_FILE" 2>/dev/null
-    cut -f1 "$REASONS_FILE" 2>/dev/null | sort -u
+    {
+        [ -f "$WHITELIST_FILE" ] && grep -vE '^[[:space:]]*#|^[[:space:]]*$' "$WHITELIST_FILE"
+        for p in $ESSENTIALS; do echo "$p"; done
+    } | awk '{ gsub(/[[:space:]]/,"") } $0 != "" { if (!seen[$0]++) print }'
+}
+
+detect_defaults() {
+    dialer=$(cmd telecom get-default-dialer 2>/dev/null)
+    [ -n "$dialer" ] && [ "$dialer" != null ] && echo "$dialer"
+    sms=$(settings get secure sms_default_application 2>/dev/null)
+    [ -n "$sms" ] && [ "$sms" != null ] && echo "$sms"
+    ime=$(settings get secure default_input_method 2>/dev/null | sed 's#/.*##')
+    [ -n "$ime" ] && [ "$ime" != null ] && echo "$ime"
+    home=$(cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME 2>/dev/null | grep / | tail -1 | sed 's#/.*##')
+    [ -n "$home" ] && echo "$home"
+}
+
+seed_whitelist() {
+    [ -f "$SEED_MARKER" ] && return
+    seeds=$(detect_defaults)
+    if [ -f "$REASONS_FILE" ]; then
+        old=$(awk -F'\t' '$2 != "Alarms & system" && $2 != "Your whitelist" && $1 ~ /^[a-zA-Z][a-zA-Z0-9_.]+$/ { print $1 }' "$REASONS_FILE" 2>/dev/null)
+        seeds=$(printf '%s\n%s\n' "$seeds" "$old")
+        rm -f "$REASONS_FILE" 2>/dev/null
+    fi
+    if [ -n "$(printf '%s' "$seeds" | tr -d '[:space:]')" ]; then
+        touch "$WHITELIST_FILE"
+        { cat "$WHITELIST_FILE"; printf '%s\n' "$seeds"; } \
+            | awk '{ gsub(/[[:space:]]/,"") } $0 ~ /^[a-zA-Z][a-zA-Z0-9_.]+$/ { if (!seen[$0]++) print }' >"$WHITELIST_FILE.tmp" 2>/dev/null \
+            && mv "$WHITELIST_FILE.tmp" "$WHITELIST_FILE"
+        log "seeded whitelist with default apps"
+    fi
+    touch "$SEED_MARKER"
 }
 
 restrict_apps() {
@@ -208,13 +206,14 @@ restrict_apps() {
         esac
         echo "$pkg" >>"$RESTRICTED_FILE"
     done
+    touch "$RESTORE_FLAG" 2>/dev/null
     apps_restricted=1
-    n=$(wc -l <"$RESTRICTED_FILE" 2>/dev/null || echo 0)
-    log "screen off: restricted $n apps (mode=$mode)"
+    n=$(grep -c . "$RESTRICTED_FILE" 2>/dev/null || echo 0)
+    log "locked: restricted $n apps (mode=$mode)"
 }
 
 restore_apps() {
-    if [ ! -s "$RESTRICTED_FILE" ]; then
+    if [ ! -f "$RESTORE_FLAG" ]; then
         apps_restricted=0
         return
     fi
@@ -223,9 +222,9 @@ restore_apps() {
         am set-standby-bucket "$pkg" active >/dev/null 2>&1
         cmd appops set "$pkg" RUN_ANY_IN_BACKGROUND allow >/dev/null 2>&1
     done <"$RESTRICTED_FILE"
-    rm -f "$RESTRICTED_FILE" 2>/dev/null
+    rm -f "$RESTORE_FLAG" 2>/dev/null
     apps_restricted=0
-    log "screen on: restored apps"
+    log "unlocked: restored apps"
 }
 
 is_call_active() {
@@ -238,8 +237,14 @@ read_ma() {
     raw=${raw#-}
     [ -z "$raw" ] && return 1
     case "$raw" in *[!0-9]*) return 1 ;; esac
-    [ "$raw" -gt 10000 ] && raw=$((raw / 1000))
-    echo "$raw"
+    div=$((raw / 1000))
+    if [ "$div" -ge 1 ] && [ "$div" -le 3000 ]; then
+        echo "$div"
+    elif [ "$raw" -ge 1 ] && [ "$raw" -le 3000 ]; then
+        echo "$raw"
+    else
+        echo "$div"
+    fi
 }
 
 force_doze() {
@@ -251,15 +256,28 @@ unforce_doze() {
     has dumpsys && dumpsys deviceidle unforce >/dev/null 2>&1
 }
 
-screen_is_off() {
-    state=$(dumpsys power 2>/dev/null | grep -m1 mWakefulness= | sed 's/.*mWakefulness=//;s/[^A-Za-z].*//')
-    case "$state" in
-        Asleep|Dozing) return 0 ;;
+is_locked() {
+    dumpsys activity activities 2>/dev/null | grep -q 'mKeyguardShowing=true'
+}
+
+screen_awake() {
+    state=$(dumpsys power 2>/dev/null | grep -m1 'mWakefulness=' | sed 's/.*mWakefulness=//;s/[^A-Za-z].*//')
+    [ "$state" = Awake ]
+}
+
+device_active() {
+    screen_awake && ! is_locked
+}
+
+is_charging() {
+    st=$(cat /sys/class/power_supply/battery/status 2>/dev/null)
+    case "$st" in
+        Charging|Full) return 0 ;;
         *) return 1 ;;
     esac
 }
 
-trap 'cpu_restore; restore_apps; unforce_doze; rm -f "$PIDFILE"; exit 0' INT TERM EXIT
+trap 'cpu_restore; restore_apps; unforce_doze; rm -f "$PIDFILE"; rmdir "$LOCKDIR" 2>/dev/null; exit 0' INT TERM EXIT
 
 elapsed=0
 while [ "$(getprop sys.boot_completed 2>/dev/null)" != 1 ] && [ "$elapsed" -lt "$BOOT_WAIT_TIMEOUT" ]; do
@@ -271,7 +289,9 @@ if ls "$CPU_STATE_DIR"/*.max >/dev/null 2>&1; then
     cpu_lowered=1
     cpu_restore
 fi
-[ -s "$RESTRICTED_FILE" ] && restore_apps
+[ -f "$RESTORE_FLAG" ] && restore_apps
+
+seed_whitelist
 
 log "service started (mode=$mode)"
 
@@ -280,24 +300,35 @@ off_sum=0
 off_count=0
 off_max=0
 off_min=0
+off_cycles=0
 while true; do
-    ma=$(read_ma)
-    if screen_is_off; then
+    if ! device_active; then
         if [ "$prev" != off ]; then
-            [ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE" 2>/dev/null
+            load_config
             off_sum=0
             off_count=0
             off_max=0
             off_min=0
+            off_cycles=0
             rm -f "$DRAW_FILE" 2>/dev/null
         fi
-        if is_call_active; then
+        if is_call_active || is_charging; then
             cpu_restore
             restore_apps
+            unforce_doze
         else
-            [ "$prev" != off ] && force_doze
+            if [ "$prev" != off ]; then
+                force_doze
+            else
+                off_cycles=$((off_cycles + 1))
+                if [ "$off_cycles" -ge "$doze_refire_cycles" ]; then
+                    force_doze
+                    off_cycles=0
+                fi
+            fi
             cpu_lower
             restrict_apps
+            ma=$(read_ma)
             if [ -n "$ma" ]; then
                 off_sum=$((off_sum + ma))
                 off_count=$((off_count + 1))
@@ -307,6 +338,12 @@ while true; do
             fi
         fi
         prev=off
+        slept=0
+        while [ "$slept" -lt "$screen_off_poll" ]; do
+            sleep "$screen_poll"
+            slept=$((slept + screen_poll))
+            device_active && break
+        done
     else
         if [ "$prev" = off ]; then
             cpu_restore
@@ -314,6 +351,6 @@ while true; do
             unforce_doze
         fi
         prev=on
+        sleep "$screen_poll"
     fi
-    sleep "$screen_poll"
 done

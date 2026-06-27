@@ -1,6 +1,8 @@
 # DeepDoze Enforcer
 
-Universal battery-saving module for **Magisk**, **KernelSU** and **APatch**. It enforces aggressive Doze, kills background wakelocks, throttles Google Play Services, and restricts background apps — all while respecting your personal preferences for location, sync, animations and battery saver.
+Universal battery-saving module for **Magisk**, **KernelSU** and **APatch**. It enforces aggressive Doze, throttles the CPU while your phone is locked, and restricts background apps — without changing your Wi-Fi, Bluetooth, network, location or sensor settings, and with no dedicated Google Play Services handling (Google apps are treated like any other app).
+
+Savings are tied to the **lock state, not the screen**: turning on the screen just to check the time keeps them active; everything is restored the moment you unlock (any method — fingerprint, face, Smart Lock). If you run with **no lock screen** at all, it falls back to screen-off so savings still apply.
 
 ## Compatibility
 
@@ -11,31 +13,30 @@ Universal battery-saving module for **Magisk**, **KernelSU** and **APatch**. It 
 ## What it does
 
 **Deep sleep enforcement**
-- Forces the device into deep Doze shortly after the screen turns off
-- Re-enforces during long screen-off periods via periodic maintenance
+- Forces the device into deep Doze shortly after you lock the phone
+- Re-enforces during long locked periods via periodic maintenance
 
 **Background restrictions**
-- Denies `RUN_IN_BACKGROUND`, `WAKE_LOCK` and `BOOT_COMPLETED` for non-whitelisted apps
-- Moves background apps into the restricted standby bucket
-- Cancels scheduled jobs and exact alarms for non-whitelisted apps
+- Moves non-whitelisted apps into the `rare` (gentle) or `restricted` (balanced / aggressive) standby bucket while the phone is locked
+- Denies the `RUN_ANY_IN_BACKGROUND` app-op for non-whitelisted apps in balanced and aggressive modes
+- In aggressive mode, also force-stops idle non-foreground apps
+- The restricted bucket is what the OS uses to defer their jobs, alarms and network — the module sets the bucket, it does not cancel jobs or alarms directly
+- Everything is reverted (buckets back to `active`, app-op re-allowed) the moment you unlock
 
 **Google Play Services optimization**
-- Removes GMS / GSF from the Doze whitelist
-- Ignores background app-ops and hibernates GMS when the screen is off
-- Reduces check-in frequency and trims memory
+- No dedicated GMS / GSF throttling is currently implemented
+- Google packages are handled like other apps: protected when whitelisted, otherwise eligible for the same while-locked background restrictions
 
 **Network, location and sensors**
-- Disables Wi-Fi / BLE background scanning and network scoring
-- Restricts background data for non-whitelisted apps
-- Switches location to battery-saving mode (only if you have location enabled)
-- Freezes sensors for background apps
+- Does not change Wi-Fi, Bluetooth scanning, network scoring, location mode or sensor settings
+- Savings while locked come from Doze enforcement, CPU throttling and app standby / background-run restrictions for eligible third-party apps
 
 ## Respects your choices
 
-The module deliberately does **not** override:
-- Your battery-saver preference (uses adaptive power save, not forced low-power)
-- Your location toggle (skips entirely if you turned location off)
-- Your sync preference (preserved if you enabled it; restored when the screen turns on)
+The module does **not** touch or override any of these system settings:
+- Battery-saver / low-power mode
+- Location mode and toggles
+- Account sync preferences
 - Animation scales, screen-off timeout and always-on display
 
 ## Configuration
@@ -46,7 +47,7 @@ A config file is generated on first boot at:
 /data/adb/deepdoze/config
 ```
 
-Edit it to change the whitelist, aggression level (`mild` / `moderate` / `nuclear`) or toggle any individual feature, then reboot.
+Edit it to change the mode (`gentle` / `balanced` / `aggressive`, or `off` to disable app restrictions) or to toggle features such as `enable_cpu_throttle` and `enable_force_doze`, then reboot. The whitelist is a separate file with one package per line at `/data/adb/deepdoze/whitelist`.
 
 ## Command line
 

@@ -1,25 +1,27 @@
 # Changelog
 
-## v3.4.1
+## v3.5.0
 
-### WebUI redesign — clearer and outcome-focused
-- New **Sleep engine** status and descriptive sleep states instead of raw CPU/governor internals
-- **Battery while asleep**: average drain, estimated overnight drain and best–worst range
-- **Protected apps** split into Automatically protected, Your whitelist and Restricted counts
-- **Recent activity** rewritten into human-readable events with reasons (collapsible)
-- **Why an app is protected** view showing the exact reason per app (media, navigation, foreground service, default app, alarm, whitelist…)
+### Protected apps are now fully in your control
+- Replaced automatic, behaviour-based protection with a single **explicit list**: apps you check stay awake while your phone is locked; everything else is restricted
+- Restrictions are tied to the **lock state**, not the screen: turning on the screen just to check the time keeps savings active — they only lift when you actually unlock
+- On first run the important defaults — your **phone, SMS, keyboard and home launcher** — are detected and pre-selected for you, so nothing critical breaks out of the box. Uncheck any you don't want
+- Your **clock/alarm apps and root manager** are always protected and aren't shown in the list
+- The app list now shows a simple **Protected (kept awake)** and **Restricted while asleep** count — no more confusing "automatically protected" category or per-app reason badges
 
-### Manage protected apps
-- New **app picker**: choose which installed apps to keep awake, with search and an optional "Show system apps" toggle
-- Auto-protected apps now appear pre-selected with a green reason badge, and can be toggled
-- Clearer black selection checkboxes
-- The background service now records the exact protection reason for each app
+### WebUI
+- Outcome-focused dashboard: **Sleep engine** status, **Battery while asleep** (average / best–worst drain) and human-readable **Recent activity**
+- App picker with search and an optional "Show system apps" toggle
+- Restriction modes: **Gentle**, **Balanced**, **Aggressive**
 
 ### Reliability
-- The **action button** now starts the background service if it isn't running, so the module works right after flashing without a reboot
+- The **action button** starts the background service if it isn't running, so the module works right after flashing without a reboot
+- Fixed home-launcher detection (was failing to resolve the default launcher on some devices)
+- Restore-on-unlock works with every unlock method (fingerprint, face, Smart Lock / trusted devices); if you have **no lock screen at all**, it falls back to screen-off so savings still apply
 
 ### Removed
-- Manual Force/Restore controls and the raw output console — the module works automatically when the screen is off
+- Live activity detection and the automatic "in use / media / foreground" protection — protection is now whatever you choose, plus the always-on essentials
+- Manual Force/Restore controls and the raw output console — the module works automatically while your phone is locked
 
 ## v3.4
 - Longer battery life: deep-sleeps the phone when the screen is off and stops apps draining power, while keeping alarms, calls and messages working
