@@ -12,18 +12,19 @@ customize.sh
 post-fs-data.sh
 service.sh
 action.sh
+uninstall.sh
 icon.png
 banner.png
 README.md
 CHANGELOG.md
 META-INF/com/google/android/update-binary
 META-INF/com/google/android/updater-script
-system/bin/deepdoze
 webroot/index.html
-webroot/banner.jpg
+webroot/style.css
+webroot/app.js
 "
 
-EXE="customize.sh post-fs-data.sh service.sh action.sh system/bin/deepdoze META-INF/com/google/android/update-binary"
+EXE="customize.sh post-fs-data.sh service.sh action.sh uninstall.sh META-INF/com/google/android/update-binary"
 
 chmod 0755 $EXE 2>/dev/null || true
 
@@ -37,7 +38,7 @@ import sys, os, zipfile
 zipname = sys.argv[1]
 files = sys.argv[2:]
 exe = {"customize.sh","post-fs-data.sh","service.sh","action.sh",
-       "system/bin/deepdoze","META-INF/com/google/android/update-binary"}
+       "uninstall.sh","META-INF/com/google/android/update-binary"}
 with zipfile.ZipFile(zipname, "w", zipfile.ZIP_DEFLATED) as z:
     for f in files:
         zi = zipfile.ZipInfo(f)
