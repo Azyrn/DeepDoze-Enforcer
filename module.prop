@@ -1,7 +1,7 @@
 id=deepdoze_enforcer
 name=DeepDoze Enforcer
-version=v3.5.0
-versionCode=36
+version=v3.5.1
+versionCode=37
 author=skeler
 description=Longer battery life — deep-sleeps your phone while it's locked and stops apps draining power, while keeping your alarms, calls and messages working. Restrictions lift the moment you unlock. For Magisk, KernelSU and APatch.
 minMagisk=24000

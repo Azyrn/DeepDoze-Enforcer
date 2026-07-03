@@ -1,5 +1,20 @@
 # Changelog
 
+## v3.5.1
+
+### WebUI redesigned
+- Rebuilt from scratch with a Material 3 look: master engine switch, live status chips and a headline **drain-while-asleep** readout with best/worst
+- Guided **restriction mode** picker with plain-language explanations and trade-off warnings, including a new **Leave apps alone** option (deep doze and CPU limit only)
+- **Force deep doze** and **Slow the CPU** are now switches in the UI instead of hidden config keys
+- Protected apps: app names and avatars, quick search, Protected/Paused filters, sorting, system-app toggle, multi-select with bulk protect/unprotect, and instant autosave — no Save button
+- **OS-exempt** badge shows apps Android already excludes from battery optimization; always-protected essentials are shown locked
+- Settings save atomically and never clobber other config values
+
+### Housekeeping
+- Removed the `deepdoze` command-line tool — the WebUI is the interface
+- Added `uninstall.sh`: removing the module now restores CPU clocks, app restrictions and doze state
+- Faster unlock reaction via screen-event feed instead of pure polling
+
 ## v3.5.0
 
 ### Protected apps are now fully in your control
