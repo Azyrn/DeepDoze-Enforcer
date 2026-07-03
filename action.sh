@@ -37,6 +37,9 @@ else
 fi
 
 echo "Forcing deep sleep now..."
+if dumpsys power 2>/dev/null | grep -q 'mWakefulness=Awake'; then
+    echo "Screen is on - turn the display OFF for doze to take effect."
+fi
 dumpsys deviceidle enable 2>/dev/null
 dumpsys deviceidle force-idle deep 2>/dev/null
 sync 2>/dev/null

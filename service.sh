@@ -10,11 +10,13 @@ RESTRICTED_FILE="$LOG_DIR/restricted_pkgs"
 RESTORE_FLAG="$LOG_DIR/needs_restore"
 PROTECTED_FILE="$LOG_DIR/protected_last"
 REASONS_FILE="$LOG_DIR/protected_reasons"
+KEEP_FILE="$LOG_DIR/appops_keep"
 SEED_MARKER="$LOG_DIR/seeded"
 CPU_BASE="/sys/devices/system/cpu"
 CPU_STATE_DIR="$LOG_DIR/cpu_state"
 DRAW_FILE="$LOG_DIR/draw_off"
-BATT_CURRENT="/sys/class/power_supply/battery/current_now"
+EVENT_PIPE="$LOG_DIR/screen.fifo"
+BATT_DIR="/sys/class/power_supply/battery"
 BOOT_WAIT_TIMEOUT=180
 
 mode=balanced
@@ -30,6 +32,12 @@ ESSENTIALS="com.google.android.deskclock com.android.deskclock com.sec.android.a
 
 cpu_lowered=0
 apps_restricted=0
+doze_forced=0
+event_fd=0
+feed_pid=""
+feed_ok=0
+feed_fails=0
+kg_src=activity
 
 mkdir -p "$LOG_DIR" 2>/dev/null
 
@@ -43,16 +51,19 @@ log() {
 
 has() { command -v "$1" >/dev/null 2>&1; }
 
+pos_num() {
+    case "$1" in
+        ''|*[!0-9]*|0) echo "$2" ;;
+        *) echo "$1" ;;
+    esac
+}
+
 load_config() {
     [ -f "$CONFIG_FILE" ] && . "$CONFIG_FILE" 2>/dev/null
-    case "$screen_poll" in
-        ""|*[!0-9]*) screen_poll=2 ;;
-        *) [ "$screen_poll" -lt 1 ] && screen_poll=2 ;;
-    esac
-    case "$screen_off_poll" in
-        ""|*[!0-9]*) screen_off_poll=20 ;;
-        *) [ "$screen_off_poll" -lt 1 ] && screen_off_poll=20 ;;
-    esac
+    screen_poll=$(pos_num "$screen_poll" 2)
+    screen_off_poll=$(pos_num "$screen_off_poll" 20)
+    doze_refire_cycles=$(pos_num "$doze_refire_cycles" 6)
+    case "$mode" in gentle|balanced|aggressive|off) ;; *) mode=balanced ;; esac
 }
 
 load_config
@@ -65,6 +76,15 @@ if ! mkdir "$LOCKDIR" 2>/dev/null; then
 fi
 echo $$ >"$PIDFILE"
 
+find_batt() {
+    for d in "$BATT_DIR" /sys/class/power_supply/Battery; do
+        [ -f "$d/status" ] && { BATT_DIR=$d; return; }
+    done
+    for d in /sys/class/power_supply/*; do
+        [ "$(cat "$d/type" 2>/dev/null)" = "Battery" ] && [ -f "$d/status" ] && { BATT_DIR=$d; return; }
+    done
+}
+
 cpu_freq_dirs() {
     found=0
     for p in "$CPU_BASE"/cpufreq/policy*; do
@@ -76,13 +96,20 @@ cpu_freq_dirs() {
     done
 }
 
+cpu_name() {
+    case "$1" in
+        */cpufreq) basename "${1%/cpufreq}" ;;
+        *) basename "$1" ;;
+    esac
+}
+
 cpu_lower() {
     [ "$enable_cpu_throttle" != true ] && return
     [ "$cpu_lowered" = 1 ] && return
     mkdir -p "$CPU_STATE_DIR" 2>/dev/null
     applied=0
     for d in $(cpu_freq_dirs); do
-        name=$(basename "$d")
+        name=$(cpu_name "$d")
         gov_f="$d/scaling_governor"
         max_f="$d/scaling_max_freq"
 
@@ -120,7 +147,7 @@ cpu_lower() {
 cpu_restore() {
     [ "$cpu_lowered" != 1 ] && return
     for d in $(cpu_freq_dirs); do
-        name=$(basename "$d")
+        name=$(cpu_name "$d")
         max_f="$d/scaling_max_freq"
         gov_f="$d/scaling_governor"
         if [ -w "$max_f" ]; then
@@ -140,8 +167,8 @@ cpu_restore() {
 
 foreground_pkg() {
     dumpsys activity activities 2>/dev/null \
-        | grep -m1 -E 'topResumedActivity|mResumedActivity|ResumedActivity' \
-        | grep -oE '[a-zA-Z0-9_]+\.[a-zA-Z0-9._]+/' | head -1 | tr -d /
+        | grep -m1 -E 'mResumedActivity|topResumedActivity' \
+        | sed -nE 's#.*[[:space:]]([a-zA-Z][a-zA-Z0-9_.]*)/[^[:space:]]*.*#\1#p'
 }
 
 build_protected() {
@@ -185,28 +212,26 @@ restrict_apps() {
     [ "$apps_restricted" = 1 ] && return
     has pm || return
     build_protected >"$PROTECTED_FILE" 2>/dev/null
-    : >"$RESTRICTED_FILE"
-    fg=$(foreground_pkg)
-    pm list packages -3 2>/dev/null | sed 's/^package://' | while read -r pkg; do
-        [ -z "$pkg" ] && continue
-        grep -qxF "$pkg" "$PROTECTED_FILE" 2>/dev/null && continue
-        case "$mode" in
-            gentle)
-                am set-standby-bucket "$pkg" rare >/dev/null 2>&1
-                ;;
-            balanced)
-                am set-standby-bucket "$pkg" restricted >/dev/null 2>&1
-                cmd appops set "$pkg" RUN_ANY_IN_BACKGROUND ignore >/dev/null 2>&1
-                ;;
-            aggressive)
-                am set-standby-bucket "$pkg" restricted >/dev/null 2>&1
-                cmd appops set "$pkg" RUN_ANY_IN_BACKGROUND ignore >/dev/null 2>&1
-                [ "$pkg" != "$fg" ] && am force-stop "$pkg" >/dev/null 2>&1
-                ;;
-        esac
-        echo "$pkg" >>"$RESTRICTED_FILE"
-    done
+    pm list packages -3 2>/dev/null | sed 's/^package://' \
+        | grep -vxF -f "$PROTECTED_FILE" >"$RESTRICTED_FILE.tmp" 2>/dev/null
+    mv "$RESTRICTED_FILE.tmp" "$RESTRICTED_FILE" 2>/dev/null
+    if [ ! -s "$RESTRICTED_FILE" ]; then
+        apps_restricted=1
+        return
+    fi
+    cmd appops query-op RUN_ANY_IN_BACKGROUND ignore 2>/dev/null >"$KEEP_FILE"
     touch "$RESTORE_FLAG" 2>/dev/null
+    fg=$(foreground_pkg)
+    bucket=restricted
+    [ "$mode" = gentle ] && bucket=rare
+    while read -r pkg; do
+        [ -z "$pkg" ] && continue
+        am set-standby-bucket "$pkg" "$bucket" >/dev/null 2>&1
+        if [ "$mode" != gentle ]; then
+            cmd appops set "$pkg" RUN_ANY_IN_BACKGROUND ignore >/dev/null 2>&1
+            [ "$mode" = aggressive ] && [ "$pkg" != "$fg" ] && am force-stop "$pkg" >/dev/null 2>&1
+        fi
+    done <"$RESTRICTED_FILE"
     apps_restricted=1
     n=$(grep -c . "$RESTRICTED_FILE" 2>/dev/null || echo 0)
     log "locked: restricted $n apps (mode=$mode)"
@@ -220,7 +245,8 @@ restore_apps() {
     while read -r pkg; do
         [ -z "$pkg" ] && continue
         am set-standby-bucket "$pkg" active >/dev/null 2>&1
-        cmd appops set "$pkg" RUN_ANY_IN_BACKGROUND allow >/dev/null 2>&1
+        grep -qxF "$pkg" "$KEEP_FILE" 2>/dev/null \
+            || cmd appops set "$pkg" RUN_ANY_IN_BACKGROUND default >/dev/null 2>&1
     done <"$RESTRICTED_FILE"
     rm -f "$RESTORE_FLAG" 2>/dev/null
     apps_restricted=0
@@ -233,30 +259,60 @@ is_call_active() {
 }
 
 read_ma() {
-    raw=$(cat "$BATT_CURRENT" 2>/dev/null)
+    raw=$(cat "$BATT_DIR/current_now" 2>/dev/null)
     raw=${raw#-}
-    [ -z "$raw" ] && return 1
-    case "$raw" in *[!0-9]*) return 1 ;; esac
-    div=$((raw / 1000))
-    if [ "$div" -ge 1 ] && [ "$div" -le 3000 ]; then
-        echo "$div"
+    case "$raw" in ''|*[!0-9]*) return 1 ;; esac
+    ma=$((raw / 1000))
+    if [ "$ma" -ge 1 ] && [ "$ma" -le 3000 ]; then
+        echo "$ma"
     elif [ "$raw" -ge 1 ] && [ "$raw" -le 3000 ]; then
         echo "$raw"
     else
-        echo "$div"
+        echo "$ma"
     fi
+}
+
+sample_draw() {
+    ma=$(read_ma) || return
+    [ -z "$ma" ] && return
+    off_sum=$((off_sum + ma))
+    off_count=$((off_count + 1))
+    [ "$ma" -gt "$off_max" ] && off_max=$ma
+    { [ "$off_min" -eq 0 ] || [ "$ma" -lt "$off_min" ]; } && off_min=$ma
+    echo "$((off_sum / off_count)) $off_max $off_min" >"$DRAW_FILE" 2>/dev/null
 }
 
 force_doze() {
     [ "$enable_force_doze" != true ] && return
-    has dumpsys && dumpsys deviceidle force-idle deep >/dev/null 2>&1
+    has dumpsys || return
+    dumpsys deviceidle force-idle deep >/dev/null 2>&1 && doze_forced=1
 }
 
 unforce_doze() {
+    [ "$doze_forced" = 1 ] || return
     has dumpsys && dumpsys deviceidle unforce >/dev/null 2>&1
+    doze_forced=0
+}
+
+detect_kg() {
+    if dumpsys activity activities 2>/dev/null | grep -q 'mKeyguardShowing='; then
+        kg_src=activity
+    elif dumpsys window policy 2>/dev/null | grep -qE '(^|[[:space:]])showing='; then
+        kg_src=policy
+    else
+        kg_src=activity
+    fi
 }
 
 is_locked() {
+    if [ "$kg_src" = policy ]; then
+        kline=$(dumpsys window policy 2>/dev/null | grep -m1 -E '(^|[[:space:]])showing=')
+        case "$kline" in
+            *showing=true*) return 0 ;;
+            *showing=false*) return 1 ;;
+        esac
+        kg_src=activity
+    fi
     dumpsys activity activities 2>/dev/null | grep -q 'mKeyguardShowing=true'
 }
 
@@ -270,14 +326,81 @@ device_active() {
 }
 
 is_charging() {
-    st=$(cat /sys/class/power_supply/battery/status 2>/dev/null)
+    st=$(cat "$BATT_DIR/status" 2>/dev/null)
     case "$st" in
         Charging|Full) return 0 ;;
         *) return 1 ;;
     esac
 }
 
-trap 'cpu_restore; restore_apps; unforce_doze; rm -f "$PIDFILE"; rmdir "$LOCKDIR" 2>/dev/null; exit 0' INT TERM EXIT
+init_event_pipe() {
+    event_fd=0
+    has mkfifo || return
+    has logcat || return
+    rm -f "$EVENT_PIPE" 2>/dev/null
+    mkfifo "$EVENT_PIPE" 2>/dev/null || return
+    ( exec 3<>"$EVENT_PIPE" ) 2>/dev/null || { rm -f "$EVENT_PIPE"; return; }
+    exec 3<>"$EVENT_PIPE"
+    event_fd=1
+}
+
+start_feed() {
+    [ "$event_fd" = 1 ] || return
+    [ -n "$feed_pid" ] && kill -0 "$feed_pid" 2>/dev/null && return
+    logcat -b events -T 1 -s screen_toggled >&3 2>/dev/null &
+    feed_pid=$!
+}
+
+stop_feed() {
+    [ -n "$feed_pid" ] && kill "$feed_pid" 2>/dev/null
+    feed_pid=""
+}
+
+wait_screen_on() {
+    if [ -n "$feed_pid" ]; then
+        remain=$screen_off_poll
+        while [ "$remain" -gt 0 ]; do
+            chunk=$screen_off_poll
+            [ "$feed_ok" != 1 ] && chunk=$screen_poll
+            [ "$chunk" -gt "$remain" ] && chunk=$remain
+            line=""
+            if read -r -t "$chunk" line <&3; then
+                case "$line" in
+                    *screen_toggled*)
+                        if [ "$feed_ok" != 1 ]; then
+                            feed_ok=1
+                            log "screen event feed confirmed"
+                        fi
+                        val=${line##*:}
+                        val=$(echo $val)
+                        [ "$val" != 0 ] && return 0
+                        ;;
+                esac
+                remain=$((remain - 1))
+            else
+                remain=$((remain - chunk))
+                if [ "$feed_ok" != 1 ]; then
+                    screen_awake && return 0
+                fi
+            fi
+        done
+        if ! kill -0 "$feed_pid" 2>/dev/null; then
+            feed_fails=$((feed_fails + 1))
+            stop_feed
+            [ "$feed_fails" -le 3 ] && start_feed
+        fi
+        return 1
+    fi
+    slept=0
+    while [ "$slept" -lt "$screen_off_poll" ]; do
+        sleep "$screen_poll"
+        slept=$((slept + screen_poll))
+        screen_awake && return 0
+    done
+    return 1
+}
+
+trap 'stop_feed; cpu_restore; restore_apps; unforce_doze; rm -f "$PIDFILE" "$EVENT_PIPE"; rmdir "$LOCKDIR" 2>/dev/null; exit 0' INT TERM EXIT
 
 elapsed=0
 while [ "$(getprop sys.boot_completed 2>/dev/null)" != 1 ] && [ "$elapsed" -lt "$BOOT_WAIT_TIMEOUT" ]; do
@@ -289,11 +412,18 @@ if ls "$CPU_STATE_DIR"/*.max >/dev/null 2>&1; then
     cpu_lowered=1
     cpu_restore
 fi
-[ -f "$RESTORE_FLAG" ] && restore_apps
+if [ -f "$RESTORE_FLAG" ]; then
+    has dumpsys && dumpsys deviceidle unforce >/dev/null 2>&1
+    restore_apps
+fi
 
+find_batt
+detect_kg
+pkill -f "logcat -b events -T 1 -s screen_toggled" 2>/dev/null
+init_event_pipe
 seed_whitelist
 
-log "service started (mode=$mode)"
+log "service started (mode=$mode kg=$kg_src events=$event_fd)"
 
 prev=on
 off_sum=0
@@ -301,56 +431,47 @@ off_count=0
 off_max=0
 off_min=0
 off_cycles=0
+off_skip=0
 while true; do
-    if ! device_active; then
-        if [ "$prev" != off ]; then
-            load_config
-            off_sum=0
-            off_count=0
-            off_max=0
-            off_min=0
-            off_cycles=0
-            rm -f "$DRAW_FILE" 2>/dev/null
-        fi
-        if is_call_active || is_charging; then
-            cpu_restore
-            restore_apps
-            unforce_doze
-        else
-            if [ "$prev" != off ]; then
-                force_doze
-            else
-                off_cycles=$((off_cycles + 1))
-                if [ "$off_cycles" -ge "$doze_refire_cycles" ]; then
-                    force_doze
-                    off_cycles=0
-                fi
-            fi
-            cpu_lower
-            restrict_apps
-            ma=$(read_ma)
-            if [ -n "$ma" ]; then
-                off_sum=$((off_sum + ma))
-                off_count=$((off_count + 1))
-                [ "$ma" -gt "$off_max" ] && off_max=$ma
-                { [ "$off_min" -eq 0 ] || [ "$ma" -lt "$off_min" ]; } && off_min=$ma
-                echo "$((off_sum / off_count)) $off_max $off_min" >"$DRAW_FILE" 2>/dev/null
-            fi
-        fi
-        prev=off
-        slept=0
-        while [ "$slept" -lt "$screen_off_poll" ]; do
-            sleep "$screen_poll"
-            slept=$((slept + screen_poll))
-            device_active && break
-        done
-    else
+    if device_active; then
         if [ "$prev" = off ]; then
+            stop_feed
             cpu_restore
-            restore_apps
             unforce_doze
+            restore_apps
         fi
         prev=on
         sleep "$screen_poll"
+        continue
     fi
+    if [ "$prev" != off ]; then
+        prev=off
+        load_config
+        off_sum=0
+        off_count=0
+        off_max=0
+        off_min=0
+        off_cycles=0
+        off_skip=1
+        rm -f "$DRAW_FILE" 2>/dev/null
+        start_feed
+    fi
+    if is_call_active || is_charging; then
+        cpu_restore
+        restore_apps
+        unforce_doze
+        off_cycles=0
+    else
+        [ "$off_cycles" = 0 ] && force_doze
+        off_cycles=$((off_cycles + 1))
+        [ "$off_cycles" -ge "$doze_refire_cycles" ] && off_cycles=0
+        cpu_lower
+        restrict_apps
+        if [ "$off_skip" = 1 ]; then
+            off_skip=0
+        else
+            sample_draw
+        fi
+    fi
+    wait_screen_on
 done
