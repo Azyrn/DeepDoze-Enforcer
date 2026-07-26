@@ -1,0 +1,106 @@
+#!/bin/sh
+
+name=${0##*/}
+state=${MOCK_STATE:?}
+
+record() {
+    printf '%s\n' "$*" >>"$state/operations"
+}
+
+case "$name" in
+    getprop)
+        case "$1" in
+            sys.boot_completed) echo 1 ;;
+            ro.build.version.sdk) cat "$state/sdk" 2>/dev/null || echo 34 ;;
+        esac
+        ;;
+    dumpsys)
+        case "$1 $2" in
+            "power ")
+                echo "mWakefulness=$(cat "$state/wakefulness" 2>/dev/null || echo Asleep)"
+                ;;
+            "activity activities")
+                echo "mKeyguardShowing=$(cat "$state/keyguard" 2>/dev/null || echo true)"
+                echo "mResumedActivity: ActivityRecord{ com.foreground/.Main }"
+                ;;
+            "window policy")
+                echo "showing=$(cat "$state/keyguard" 2>/dev/null || echo true)"
+                ;;
+            "telephony.registry ")
+                echo "mCallState=$(cat "$state/call_state" 2>/dev/null || echo 0)"
+                ;;
+            "deviceidle force-idle")
+                record "doze force $3"
+                echo IDLE >"$state/doze"
+                ;;
+            "deviceidle unforce")
+                record "doze unforce"
+                echo ACTIVE >"$state/doze"
+                ;;
+            "deviceidle get")
+                cat "$state/doze" 2>/dev/null || echo ACTIVE
+                ;;
+            "deviceidle whitelist")
+                cat "$state/deviceidle_whitelist" 2>/dev/null || true
+                ;;
+        esac
+        ;;
+    pm)
+        if [ "$1 $2 $3" = "list packages -3" ]; then
+            echo package:com.example.app
+        elif [ "$1 $2 $3" = "list packages -s" ]; then
+            echo package:android
+        fi
+        ;;
+    am)
+        case "$1" in
+            get-standby-bucket)
+                file="$state/bucket_$2"
+                cat "$file" 2>/dev/null || echo 30
+                ;;
+            set-standby-bucket)
+                record "bucket $2 $3"
+                printf '%s\n' "$3" >"$state/bucket_$2"
+                ;;
+            force-stop)
+                record "force-stop $2"
+                ;;
+        esac
+        ;;
+    cmd)
+        case "$1 $2" in
+            "telecom get-default-dialer")
+                echo com.android.dialer
+                ;;
+            "package resolve-activity")
+                echo com.android.launcher/.Home
+                ;;
+            "appops get")
+                mode=$(cat "$state/appop_$3" 2>/dev/null || echo default)
+                echo "RUN_ANY_IN_BACKGROUND: $mode"
+                ;;
+            "appops set")
+                record "appop $3 $5"
+                printf '%s\n' "$5" >"$state/appop_$3"
+                ;;
+        esac
+        ;;
+    settings)
+        case "$3" in
+            sms_default_application) echo com.android.messaging ;;
+            default_input_method) echo com.android.input/.IME ;;
+        esac
+        ;;
+    sleep)
+        if [ "${MOCK_MUTATE_APP:-0}" = 1 ] && [ ! -f "$state/app_mutated" ]; then
+            printf '%s\n' 30 >"$state/bucket_com.example.app"
+            printf '%s\n' deny >"$state/appop_com.example.app"
+            touch "$state/app_mutated"
+        fi
+        if [ "${MOCK_MUTATE_CPU:-0}" = 1 ] && [ ! -f "$state/cpu_mutated" ]; then
+            printf '%s\n' performance >"$MOCK_CPU_POLICY/scaling_governor"
+            printf '%s\n' 1500000 >"$MOCK_CPU_POLICY/scaling_max_freq"
+            touch "$state/cpu_mutated"
+        fi
+        ;;
+esac

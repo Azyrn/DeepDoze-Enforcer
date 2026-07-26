@@ -7,6 +7,38 @@
   const b64 = (s) => btoa(unescape(encodeURIComponent(s)));
   const PKG_RE = /^[a-zA-Z][a-zA-Z0-9_.]*$/;
 
+  const themeMedia = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  let savedTheme = null;
+  try { savedTheme = localStorage.getItem('deepdoze-theme'); } catch (_) {}
+  if (savedTheme !== 'light' && savedTheme !== 'dark') savedTheme = null;
+
+  function applyTheme(theme, persist) {
+    document.documentElement.dataset.theme = theme;
+    const button = $('themeToggle');
+    const next = theme === 'dark' ? 'light' : 'dark';
+    button.setAttribute('aria-label', 'Switch to ' + next + ' theme');
+    button.setAttribute('title', 'Switch to ' + next + ' theme');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d120f' : '#f7f9f4');
+    if (persist) {
+      savedTheme = theme;
+      try { localStorage.setItem('deepdoze-theme', theme); } catch (_) {}
+    }
+  }
+
+  applyTheme(savedTheme || (themeMedia && themeMedia.matches ? 'dark' : 'light'), false);
+
+  $('themeToggle').addEventListener('click', () => {
+    const current = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    applyTheme(current === 'dark' ? 'light' : 'dark', true);
+  });
+
+  if (themeMedia && typeof themeMedia.addEventListener === 'function') {
+    themeMedia.addEventListener('change', (event) => {
+      if (!savedTheme) applyTheme(event.matches ? 'dark' : 'light', false);
+    });
+  }
+
   const ESSENTIALS = new Set([
     'com.google.android.deskclock', 'com.android.deskclock', 'com.sec.android.app.clockpackage',
     'com.oneplus.deskclock', 'com.coloros.alarmclock', 'com.miui.clock', 'com.android.alarmclock',
@@ -49,13 +81,19 @@
 
   const STATUS_CMD = `
 D=/data/adb/deepdoze
-[ -f $D/config ] && . $D/config 2>/dev/null
-echo "mode=\${mode:-balanced}"
-echo "cpu=\${enable_cpu_throttle:-true}"
-echo "fdoze=\${enable_force_doze:-true}"
+cfg() { sed -n "s/^\${1}=//p" $D/config 2>/dev/null | tail -n 1; }
+mode=$(cfg mode); cpu=$(cfg enable_cpu_throttle); fdoze=$(cfg enable_force_doze)
+echo "mode=\${mode:-gentle}"
+echo "cpu=\${cpu:-false}"
+echo "fdoze=\${fdoze:-true}"
 read A B C < $D/draw_off 2>/dev/null; echo "avg=$A"; echo "max=$B"; echo "min=$C"
 RC=0; [ -f $D/restricted_pkgs ] && RC=$(grep -c . $D/restricted_pkgs 2>/dev/null); echo "restricted=$RC"
-R=no; K=$(cat $D/service.pid 2>/dev/null); [ -n "$K" ] && kill -0 $K 2>/dev/null && R=yes; echo "running=$R"
+R=no; M=/data/adb/modules/deepdoze_enforcer; K=$(cat $D/service.pid 2>/dev/null)
+if [ -n "$K" ] && kill -0 $K 2>/dev/null; then
+  C=$(tr '\\0' ' ' < /proc/$K/cmdline 2>/dev/null)
+  case "$C" in *"$M/service.sh"*) R=yes ;; esac
+fi
+echo "running=$R"
 echo "doze=$(dumpsys deviceidle get deep 2>/dev/null)"
 B=/sys/class/power_supply/battery
 echo "bstat=$(cat $B/status 2>/dev/null)"
@@ -66,7 +104,14 @@ echo "ver=$(grep -m1 '^version=' /data/adb/modules/deepdoze_enforcer/module.prop
   const START_CMD = `
 M=/data/adb/modules/deepdoze_enforcer
 if command -v setsid >/dev/null 2>&1; then setsid sh $M/service.sh </dev/null >/dev/null 2>&1 & else nohup sh $M/service.sh </dev/null >/dev/null 2>&1 & fi
-i=0; while [ $i -lt 5 ]; do sleep 1; K=$(cat /data/adb/deepdoze/service.pid 2>/dev/null); [ -n "$K" ] && kill -0 $K 2>/dev/null && { echo started; exit 0; }; i=$((i+1)); done
+i=0; while [ $i -lt 5 ]; do
+  sleep 1; K=$(cat /data/adb/deepdoze/service.pid 2>/dev/null)
+  if [ -n "$K" ] && kill -0 $K 2>/dev/null; then
+    C=$(tr '\\0' ' ' < /proc/$K/cmdline 2>/dev/null)
+    case "$C" in *"$M/service.sh"*) echo started; exit 0 ;; esac
+  fi
+  i=$((i+1))
+done
 echo failed
 `.trim();
 
@@ -74,6 +119,8 @@ echo failed
 P=/data/adb/deepdoze/service.pid
 K=$(cat $P 2>/dev/null)
 if [ -z "$K" ] || ! kill -0 $K 2>/dev/null; then echo stopped; exit 0; fi
+C=$(tr '\\0' ' ' < /proc/$K/cmdline 2>/dev/null)
+case "$C" in *"/data/adb/modules/deepdoze_enforcer/service.sh"*) ;; *) rm -f $P; echo stopped; exit 0 ;; esac
 kill $K 2>/dev/null
 i=0; while [ $i -lt 6 ]; do sleep 1; kill -0 $K 2>/dev/null || { echo stopped; exit 0; }; i=$((i+1)); done
 echo failed
@@ -160,7 +207,7 @@ dumpsys deviceidle whitelist 2>/dev/null
     }
     $('engineTag').textContent = running
       ? (charging ? 'Active — paused while charging' : 'Active — engages when you lock')
-      : 'Engine off — nothing is being saved';
+      : 'Engine off — Android battery management remains active';
 
     const chips = [];
     chips.push('<span class="stchip ' + (running ? 'on' : 'off') + '"><span class="dot"></span>' + (running ? 'Running' : 'Stopped') + '</span>');
@@ -192,10 +239,10 @@ dumpsys deviceidle whitelist 2>/dev/null
     }
     hero.classList.toggle('live', running && avg > 0);
 
-    const mode = ['gentle', 'balanced', 'aggressive', 'off'].includes(s.mode) ? s.mode : 'balanced';
+    const mode = ['gentle', 'balanced', 'aggressive', 'off'].includes(s.mode) ? s.mode : 'gentle';
     const r = document.querySelector('input[name="mode"][value="' + mode + '"]');
     if (r) r.checked = true;
-    $('cfgCpu').checked = s.cpu !== 'false';
+    $('cfgCpu').checked = s.cpu === 'true';
     $('cfgDoze').checked = s.fdoze !== 'false';
   }
 
@@ -208,7 +255,7 @@ dumpsys deviceidle whitelist 2>/dev/null
 
   let cfgSaving = false;
   async function saveConfig() {
-    const mode = (document.querySelector('input[name="mode"]:checked') || {}).value || 'balanced';
+    const mode = (document.querySelector('input[name="mode"]:checked') || {}).value || 'gentle';
     const cpu = $('cfgCpu').checked ? 'true' : 'false';
     const fdoze = $('cfgDoze').checked ? 'true' : 'false';
     if (cfgSaving) return;
@@ -281,12 +328,12 @@ D=/data/adb/deepdoze; mkdir -p $D
     if (q) {
       list = list.filter((p) => p.toLowerCase().includes(q) || displayName(p).toLowerCase().includes(q));
     }
-    if (state.filter === 'protected') list = list.filter((p) => state.protected.has(p) || ESSENTIALS.has(p));
-    else if (state.filter === 'paused') list = list.filter((p) => !state.protected.has(p) && !ESSENTIALS.has(p));
+    if (state.filter === 'protected') list = list.filter(isProtected);
+    else if (state.filter === 'paused') list = list.filter((p) => !isProtected(p));
     list.sort((a, b) => {
       if (state.sort === 'prot') {
-        const pa = state.protected.has(a) || ESSENTIALS.has(a);
-        const pb = state.protected.has(b) || ESSENTIALS.has(b);
+        const pa = isProtected(a);
+        const pb = isProtected(b);
         if (pa !== pb) return pa ? -1 : 1;
       }
       return displayName(a).localeCompare(displayName(b)) || a.localeCompare(b);
@@ -294,20 +341,25 @@ D=/data/adb/deepdoze; mkdir -p $D
     return list;
   }
 
+  function isProtected(pkg) {
+    return ESSENTIALS.has(pkg) || state.protected.has(pkg) || state.osExempt.has(pkg);
+  }
+
   function rowHTML(pkg) {
     const essential = ESSENTIALS.has(pkg);
-    const prot = essential || state.protected.has(pkg);
+    const osExempt = state.osExempt.has(pkg);
+    const prot = isProtected(pkg);
     const name = displayName(pkg);
     const h = hue(pkg);
     const badges =
       (essential ? '<span class="mini always">always</span>' : '') +
-      (state.osExempt.has(pkg) ? '<span class="mini os">OS-exempt</span>' : '');
+      (osExempt ? '<span class="mini os">OS-exempt</span>' : '');
     const picked = state.selectMode && state.picked.has(pkg);
-    const avatar = '<span class="avatar" style="background:hsl(' + h + ',32%,24%)">' +
+    const avatar = '<span class="avatar" style="--avatar-hue:' + h + '">' +
       (picked ? '✓' : esc(name.charAt(0))) + '</span>';
     const trail = state.selectMode ? '' :
       '<label class="sw" aria-label="Protect ' + esc(name) + '">' +
-      '<input type="checkbox" role="switch" data-pkg="' + esc(pkg) + '"' + (prot ? ' checked' : '') + (essential ? ' disabled' : '') + '>' +
+      '<input type="checkbox" role="switch" data-pkg="' + esc(pkg) + '"' + (prot ? ' checked' : '') + ((essential || osExempt) ? ' disabled' : '') + '>' +
       '<span class="track"><span class="thumb"></span></span></label>';
     return '<div class="approw' + (picked ? ' picked' : '') + '" data-row="' + esc(pkg) + '">' +
       avatar +
@@ -334,8 +386,8 @@ D=/data/adb/deepdoze; mkdir -p $D
   }
 
   function updateMeta() {
-    const protCount = new Set([...state.protected].filter((p) => PKG_RE.test(p))).size;
-    $('appMeta').textContent = protCount + ' protected · ' + state.user.length + ' user apps';
+    const protCount = state.user.filter(isProtected).length;
+    $('appMeta').textContent = protCount + ' protected · ' + state.user.length + ' apps';
     $('bulkCount').textContent = state.picked.size + ' selected';
   }
 
@@ -373,7 +425,7 @@ printf '%s' ${shq(b64(pkgs.join('\n')))} | base64 -d > $D/whitelist && echo ok
     if (!state.picked.size) { snack('Tap apps to select them first'); return; }
     let n = 0;
     state.picked.forEach((p) => {
-      if (ESSENTIALS.has(p)) return;
+      if (ESSENTIALS.has(p) || state.osExempt.has(p)) return;
       if (protect && !state.protected.has(p)) { state.protected.add(p); n++; }
       if (!protect && state.protected.has(p)) { state.protected.delete(p); n++; }
     });
@@ -500,6 +552,7 @@ printf '%s' ${shq(b64(pkgs.join('\n')))} | base64 -d > $D/whitelist && echo ok
     if (!row) return;
     const pkg = row.getAttribute('data-row');
     if (ESSENTIALS.has(pkg)) { snack('Always protected — can’t change'); return; }
+    if (state.osExempt.has(pkg)) { snack('Protected by Android’s battery exemption'); return; }
     if (state.picked.has(pkg)) state.picked.delete(pkg);
     else state.picked.add(pkg);
     renderApps();
@@ -510,6 +563,7 @@ printf '%s' ${shq(b64(pkgs.join('\n')))} | base64 -d > $D/whitelist && echo ok
     logShown = !logShown;
     $('logview').style.display = logShown ? 'block' : 'none';
     $('logtoggle').textContent = logShown ? 'Hide' : 'Show';
+    $('logtoggle').setAttribute('aria-expanded', logShown ? 'true' : 'false');
     if (logShown) loadLog();
   });
 

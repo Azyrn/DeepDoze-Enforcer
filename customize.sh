@@ -4,7 +4,7 @@ SKIPUNZIP=0
 
 ui_print " "
 ui_print "  DeepDoze Enforcer"
-ui_print "  Universal Battery Saver"
+ui_print "  Conservative Battery Saver"
 ui_print " "
 
 if [ "$KSU" = "true" ]; then

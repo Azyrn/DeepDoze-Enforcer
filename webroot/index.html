@@ -3,140 +3,244 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f7f9f4">
 <title>DeepDoze Enforcer</title>
+<script>
+try {
+  const savedTheme = localStorage.getItem('deepdoze-theme');
+  if (savedTheme === 'light' || savedTheme === 'dark') document.documentElement.dataset.theme = savedTheme;
+} catch (_) {}
+</script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="top">
-    <div>
-      <h1>DeepDoze <span class="ver" id="ver">…</span></h1>
-      <div class="tag" id="engineTag">Checking engine…</div>
-    </div>
-    <label class="sw big" aria-label="Sleep engine">
-      <input type="checkbox" role="switch" id="master" disabled>
-      <span class="track"><span class="thumb"></span></span>
-    </label>
-  </header>
+  <div class="app-shell">
+    <header class="appbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M18.7 15.1A7.7 7.7 0 0 1 8.9 5.3 8.1 8.1 0 1 0 18.7 15Z"/></svg>
+        </span>
+        <div>
+          <div class="brand-line">
+            <h1>DeepDoze</h1>
+            <span class="ver" id="ver">…</span>
+          </div>
+          <p>Battery control while your phone sleeps</p>
+        </div>
+      </div>
+      <button class="icon-button" id="themeToggle" type="button" aria-label="Switch theme" title="Switch theme">
+        <svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/>
+        </svg>
+        <svg class="theme-moon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20.2 15.5A8.3 8.3 0 0 1 8.5 3.8a8.5 8.5 0 1 0 11.7 11.7Z"/>
+        </svg>
+      </button>
+    </header>
 
-  <div class="statusband" id="statusband"></div>
+    <main>
+      <section class="engine-card" aria-labelledby="engineTitle">
+        <span class="engine-orb" aria-hidden="true"></span>
+        <div class="engine-main">
+          <span class="section-kicker">Sleep engine</span>
+          <h2 id="engineTitle">Save power automatically</h2>
+          <p id="engineTag" aria-live="polite">Checking engine…</p>
+        </div>
+        <label class="sw hero-switch" aria-label="Sleep engine">
+          <input type="checkbox" role="switch" id="master" disabled>
+          <span class="track"><span class="thumb"></span></span>
+        </label>
+        <div class="statusband" id="statusband" role="status" aria-live="polite"></div>
+      </section>
 
-  <div class="rootwarn" id="rootwarn">
-    Root shell unavailable. Open this page from the KernelSU, APatch or MMRL app so it can talk to the module.
+      <div class="rootwarn" id="rootwarn" role="alert">
+        <span class="notice-icon" aria-hidden="true">!</span>
+        <span><b>Root access unavailable.</b> Open this page from KernelSU, APatch, or MMRL so it can control the module.</span>
+      </div>
+
+      <section class="page-section" aria-labelledby="drainTitle">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">At a glance</span>
+            <h2 id="drainTitle">Sleep drain</h2>
+          </div>
+          <span class="meta" id="drainMeta"></span>
+        </div>
+        <div class="drain-card" id="hero">
+          <div class="drain-primary">
+            <span class="metric-label">Average current</span>
+            <div class="big" id="avgma">—<small>mA</small></div>
+            <p class="sub" id="drainSub">Lock your phone to start measuring</p>
+          </div>
+          <div class="drain-range">
+            <div>
+              <span class="range-icon best" aria-hidden="true">↓</span>
+              <span><small>Best</small><b id="minma">—</b></span>
+            </div>
+            <div>
+              <span class="range-icon worst" aria-hidden="true">↑</span>
+              <span><small>Highest</small><b id="maxma">—</b></span>
+            </div>
+          </div>
+        </div>
+        <p class="supporting-text">Compare this reading with your own baseline. Normal current varies by device, apps, signal, and ambient display settings.</p>
+      </section>
+
+      <section class="page-section" aria-labelledby="behaviorTitle">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Automatic behavior</span>
+            <h2 id="behaviorTitle">Choose how apps sleep</h2>
+          </div>
+          <span class="meta">Next lock</span>
+        </div>
+
+        <div class="mode-grid" role="radiogroup" aria-label="App restriction mode" id="modeGroup">
+          <label class="mode-option">
+            <input type="radio" name="mode" value="gentle">
+            <span class="mode-box">
+              <span class="mode-top">
+                <span class="mode-icon leaf" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M19.8 4.2C13 4.4 7.1 7.2 5.3 12.1c-1 2.8-.1 5.2 1.5 6.6 1.8-5 5.3-8.2 9.7-10.2-3.7 2.5-6.3 5.8-7.6 10.1 3.1.5 6-.8 7.8-3.6 2-3.1 2.3-7 3.1-10.8Z"/></svg>
+                </span>
+                <span class="choice-dot" aria-hidden="true"></span>
+              </span>
+              <span class="mode-name">Gentle</span>
+              <span class="mode-badge recommended">Recommended</span>
+              <span class="mode-desc">Defers background work with the lowest chance of delayed notifications.</span>
+            </span>
+          </label>
+
+          <label class="mode-option">
+            <input type="radio" name="mode" value="balanced">
+            <span class="mode-box">
+              <span class="mode-top">
+                <span class="mode-icon balance" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 3v18M5 7h14M7.5 7 4 13h7L7.5 7Zm9 0L13 13h7l-3.5-6ZM8 18h8"/></svg>
+                </span>
+                <span class="choice-dot" aria-hidden="true"></span>
+              </span>
+              <span class="mode-name">Balanced</span>
+              <span class="mode-badge caution">More control</span>
+              <span class="mode-desc">Also blocks background activity. Notifications and sync can arrive later.</span>
+            </span>
+          </label>
+
+          <label class="mode-option">
+            <input type="radio" name="mode" value="aggressive">
+            <span class="mode-box">
+              <span class="mode-top">
+                <span class="mode-icon bolt" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="m13.2 2-7 11h5.2l-.6 9 7-12h-5.2l.6-8Z"/></svg>
+                </span>
+                <span class="choice-dot" aria-hidden="true"></span>
+              </span>
+              <span class="mode-name">Aggressive</span>
+              <span class="mode-badge caution">Trade-off</span>
+              <span class="mode-desc">Force-stops idle apps. Some notifications may wait until the app is reopened.</span>
+            </span>
+          </label>
+
+          <label class="mode-option">
+            <input type="radio" name="mode" value="off">
+            <span class="mode-box">
+              <span class="mode-top">
+                <span class="mode-icon pause" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M8 6v12M16 6v12"/></svg>
+                </span>
+                <span class="choice-dot" aria-hidden="true"></span>
+              </span>
+              <span class="mode-name">Apps unchanged</span>
+              <span class="mode-desc">Leaves app state alone. Deep Doze can still run when enabled below.</span>
+            </span>
+          </label>
+        </div>
+
+        <div class="settings-card">
+          <div class="set-row">
+            <span class="setting-icon doze" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M18.7 15.1A7.7 7.7 0 0 1 8.9 5.3 8.1 8.1 0 1 0 18.7 15Z"/></svg>
+            </span>
+            <span class="body">
+              <span class="t">Force deep Doze</span>
+              <span class="d">Enter Android’s deepest idle state after the screen turns off.</span>
+            </span>
+            <label class="sw"><input type="checkbox" role="switch" id="cfgDoze" aria-label="Force deep Doze"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+          <div class="set-row">
+            <span class="setting-icon cpu" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3M10 10h4v4h-4z"/></svg>
+            </span>
+            <span class="body">
+              <span class="t">Limit CPU while asleep</span>
+              <span class="d">Experimental. Leave off when using a kernel or performance manager.</span>
+            </span>
+            <label class="sw"><input type="checkbox" role="switch" id="cfgCpu" aria-label="Limit CPU while asleep"><span class="track"><span class="thumb"></span></span></label>
+          </div>
+        </div>
+        <div class="info-note">
+          <span aria-hidden="true">i</span>
+          Changes are restored when you unlock and paused during charging or calls. Newer values from another manager are preserved.
+        </div>
+      </section>
+
+      <section class="page-section" aria-labelledby="appsTitle">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">Exceptions</span>
+            <h2 id="appsTitle">Protected apps</h2>
+          </div>
+          <span class="meta" id="appMeta"></span>
+        </div>
+        <p class="section-intro">Choose apps that should avoid DeepDoze’s extra restrictions.</p>
+
+        <label class="search-wrap" for="appsearch">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
+          <input id="appsearch" class="search" type="search" placeholder="Search apps or package names" autocapitalize="off" autocorrect="off" spellcheck="false">
+        </label>
+
+        <div class="chips" aria-label="App list filters">
+          <button class="chip" type="button" data-filter="all" aria-pressed="true">All</button>
+          <button class="chip" type="button" data-filter="protected" aria-pressed="false">Protected</button>
+          <button class="chip" type="button" data-filter="paused" aria-pressed="false">Restricted</button>
+          <button class="chip" type="button" id="sysChip" aria-pressed="false">System apps</button>
+          <button class="chip" type="button" id="sortChip" aria-pressed="false">A–Z</button>
+          <button class="chip action-chip" type="button" id="selectChip" aria-pressed="false">Select</button>
+        </div>
+
+        <div class="app-list" id="applist"><div class="empty">Loading apps…</div></div>
+        <p class="supporting-text">Clock, alarm, and root-manager packages are always protected. Android battery-exempt apps are respected automatically. Doze itself may still affect protected apps.</p>
+      </section>
+
+      <section class="page-section activity-section" aria-labelledby="activityTitle">
+        <div class="section-heading">
+          <div>
+            <span class="section-kicker">History</span>
+            <h2 id="activityTitle">Recent activity</h2>
+          </div>
+          <button class="text-button" type="button" id="logtoggle" aria-expanded="false" aria-controls="logview">Show</button>
+        </div>
+        <div class="events" id="logview" style="display:none"><div class="empty">No activity yet. Events appear after you lock your phone.</div></div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <span>DeepDoze Enforcer</span>
+      <span class="footer-dot">•</span>
+      <span>Magisk · KernelSU · APatch</span>
+      <a href="https://t.me/necotinx" data-ext="https://t.me/necotinx">Support</a>
+    </footer>
   </div>
-
-  <section>
-    <div class="sect-head">
-      <span class="eyebrow">Drain while asleep</span>
-      <span class="meta" id="drainMeta"></span>
-    </div>
-    <div class="card hero" id="hero">
-      <span class="halo"></span>
-      <div>
-        <div class="big" id="avgma">—<small>mA</small></div>
-        <div class="sub" id="drainSub">Lock your phone to start measuring</div>
-      </div>
-      <div class="range">
-        <span>best <b id="minma">—</b></span>
-        <span>worst <b id="maxma">—</b></span>
-      </div>
-    </div>
-    <p class="hint">Average battery draw while locked and off charger. Lower is better — under <b>100&nbsp;mA</b> is a healthy deep sleep.</p>
-  </section>
-
-  <section>
-    <div class="sect-head">
-      <span class="eyebrow">While locked</span>
-      <span class="meta">applies at next lock</span>
-    </div>
-    <div class="card" role="radiogroup" aria-label="App restriction mode" id="modeGroup">
-      <label class="mode-row">
-        <input type="radio" name="mode" value="gentle">
-        <span class="radio"></span>
-        <span class="body">
-          <span class="t">Gentle</span>
-          <span class="d">Unprotected apps are marked rarely used, so Android defers their sync and background jobs.</span>
-        </span>
-      </label>
-      <label class="mode-row">
-        <input type="radio" name="mode" value="balanced">
-        <span class="radio"></span>
-        <span class="body">
-          <span class="t">Balanced <span class="pill rec">recommended</span></span>
-          <span class="d">Also blocks background activity entirely until you unlock.</span>
-        </span>
-      </label>
-      <label class="mode-row">
-        <input type="radio" name="mode" value="aggressive">
-        <span class="radio"></span>
-        <span class="body">
-          <span class="t">Aggressive <span class="pill warn">trade-off</span></span>
-          <span class="d">Everything in Balanced, plus idle apps are force-stopped. A stopped app can miss notifications until you open it again.</span>
-        </span>
-      </label>
-      <label class="mode-row">
-        <input type="radio" name="mode" value="off">
-        <span class="radio"></span>
-        <span class="body">
-          <span class="t">Leave apps alone</span>
-          <span class="d">No app restriction. Deep doze and the CPU limit below still apply.</span>
-        </span>
-      </label>
-    </div>
-    <div class="card">
-      <div class="set-row">
-        <span class="body">
-          <span class="t">Force deep doze</span>
-          <span class="d">Pushes Android into its deepest idle state right after lock instead of minutes later.</span>
-        </span>
-        <label class="sw"><input type="checkbox" role="switch" id="cfgDoze"><span class="track"><span class="thumb"></span></span></label>
-      </div>
-      <div class="set-row">
-        <span class="body">
-          <span class="t">Slow the CPU</span>
-          <span class="d">Drops to powersave clocks while the screen is off. Full speed returns at unlock.</span>
-        </span>
-        <label class="sw"><input type="checkbox" role="switch" id="cfgCpu"><span class="track"><span class="thumb"></span></span></label>
-      </div>
-    </div>
-    <p class="hint">Everything here is reversed the moment you unlock, and paused automatically while charging or on a call.</p>
-  </section>
-
-  <section>
-    <div class="sect-head">
-      <span class="eyebrow">Protected apps</span>
-      <span class="meta" id="appMeta"></span>
-    </div>
-    <input id="appsearch" class="search" type="search" placeholder="Search name or package…" autocapitalize="off" autocorrect="off" spellcheck="false">
-    <div class="chips">
-      <button class="chip" data-filter="all" aria-pressed="true">All</button>
-      <button class="chip" data-filter="protected" aria-pressed="false">Protected</button>
-      <button class="chip" data-filter="paused" aria-pressed="false">Paused</button>
-      <button class="chip" id="sysChip" aria-pressed="false">System</button>
-      <button class="chip" id="sortChip" aria-pressed="false">A–Z</button>
-      <button class="chip push" id="selectChip" aria-pressed="false">Select</button>
-    </div>
-    <div class="card applist" id="applist"><div class="empty">Loading apps…</div></div>
-    <p class="hint">Protected apps keep running while your phone is locked; everything else is paused until you unlock. Toggles save automatically. Alarms, the clock and your root manager are <b>always protected</b>. <b>OS-exempt</b> means Android's own battery optimization is already off for that app.</p>
-  </section>
-
-  <section>
-    <div class="sect-head">
-      <span class="eyebrow">Activity</span>
-      <button class="linkbtn" id="logtoggle">Show</button>
-    </div>
-    <div class="card events" id="logview" style="display:none"><div class="empty">No activity yet — events appear after you lock your phone.</div></div>
-  </section>
 
   <div class="bulkbar" id="bulkbar">
     <span class="n" id="bulkCount">0 selected</span>
-    <button class="primary" id="bulkProtect">Protect</button>
-    <button id="bulkUnprotect">Unprotect</button>
-    <button class="x" id="bulkCancel">✕</button>
+    <button class="primary" type="button" id="bulkProtect">Protect</button>
+    <button type="button" id="bulkUnprotect">Unprotect</button>
+    <button class="x" type="button" id="bulkCancel" aria-label="Cancel selection">×</button>
   </div>
 
-  <div class="snackbar" id="snackbar" role="status"></div>
-
-  <div class="foot">DeepDoze Enforcer · Magisk / KernelSU / APatch<br><a href="https://t.me/necotinx" data-ext="https://t.me/necotinx">t.me/necotinx</a></div>
+  <div class="snackbar" id="snackbar" role="status" aria-live="polite"></div>
 
 <script src="app.js"></script>
 </body>

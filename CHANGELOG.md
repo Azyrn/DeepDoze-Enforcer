@@ -1,5 +1,30 @@
 # Changelog
 
+## v3.5.2
+
+### WebUI
+- Redesigned with a clean Material 3 Expressive layout and clearer task-focused language
+- Added accessible light and dark themes with a persistent theme switch
+- Reorganized engine status, drain readings, sleep modes, safety controls and app exceptions for faster scanning
+- Added responsive phone layouts, larger touch targets, visible keyboard focus and reduced-motion support
+
+### Safety and compatibility
+- Restores each app's exact previous standby bucket and background app-op instead of forcing `active` / `default`
+- Respects Android's existing battery-optimization whitelist instead of restricting OS-exempt apps
+- Preserves newer values written by another battery, kernel or performance manager
+- Tracks forced Doze independently so crashes and Action-button runs cannot leave it stuck
+- Stops only the module's recorded event-feed process; no global `pkill`
+- Removes persistent tracing-property changes
+- Forces Doze once per lock instead of waking periodically to re-force it
+- Reduces routine locked-screen checks to once per minute when the event feed is available
+- Uses Gentle mode by default and makes CPU throttling opt-in
+- Clamps custom CPU caps to the policy limits and restores clocks only when the module still owns the applied value
+- Refuses to force Doze from the Action button while the screen is awake, charging or in a call
+
+### Validation
+- Adds repeatable host-side integration tests with mocked Android services
+- Clarifies that savings are device/workload dependent and that aggressive restrictions can delay notifications
+
 ## v3.5.1
 
 ### WebUI redesigned
