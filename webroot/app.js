@@ -19,7 +19,7 @@
     button.setAttribute('aria-label', 'Switch to ' + next + ' theme');
     button.setAttribute('title', 'Switch to ' + next + ' theme');
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', theme === 'dark' ? '#0d120f' : '#f7f9f4');
+    if (meta) meta.setAttribute('content', theme === 'dark' ? '#101413' : '#f5f7f5');
     if (persist) {
       savedTheme = theme;
       try { localStorage.setItem('deepdoze-theme', theme); } catch (_) {}
@@ -53,6 +53,7 @@
       if (typeof ksu === 'undefined' || typeof ksu.exec !== 'function') {
         hasRoot = false;
         $('rootwarn').classList.add('show');
+        $('ver').textContent = '';
         resolve({ errno: -1, stdout: '', stderr: 'no root bridge' });
         return;
       }
@@ -205,9 +206,10 @@ dumpsys deviceidle whitelist 2>/dev/null
       master.disabled = false;
       master.checked = running;
     }
+    $('engineCard').classList.toggle('is-off', !running);
     $('engineTag').textContent = running
       ? (charging ? 'Active — paused while charging' : 'Active — engages when you lock')
-      : 'Engine off — Android battery management remains active';
+      : 'Off — Android battery management still applies';
 
     const chips = [];
     chips.push('<span class="stchip ' + (running ? 'on' : 'off') + '"><span class="dot"></span>' + (running ? 'Running' : 'Stopped') + '</span>');
@@ -229,7 +231,7 @@ dumpsys deviceidle whitelist 2>/dev/null
       $('minma').textContent = parseInt(s.min, 10) > 0 ? s.min + ' mA' : '—';
       $('maxma').textContent = parseInt(s.max, 10) > 0 ? s.max + ' mA' : '—';
       $('drainSub').textContent = 'Measured from the battery while locked';
-      $('drainMeta').textContent = 'last locked session';
+      $('drainMeta').textContent = 'Last locked session';
     } else {
       $('avgma').innerHTML = '—<small>mA</small>';
       $('minma').textContent = '—';
@@ -483,7 +485,7 @@ printf '%s' ${shq(b64(pkgs.join('\n')))} | base64 -d > $D/whitelist && echo ok
     const lines = (r.stdout || '').split('\n').map((l) => l.trim()).filter(Boolean);
     $('logview').innerHTML = lines.length
       ? lines.reverse().map(formatEvent).join('')
-      : '<div class="empty">No activity yet — events appear after you lock your phone.</div>';
+      : '<div class="empty">No activity yet. Events appear after you lock your phone.</div>';
   }
 
   $('master').addEventListener('change', toggleMaster);
@@ -561,7 +563,7 @@ printf '%s' ${shq(b64(pkgs.join('\n')))} | base64 -d > $D/whitelist && echo ok
   let logShown = false;
   $('logtoggle').addEventListener('click', () => {
     logShown = !logShown;
-    $('logview').style.display = logShown ? 'block' : 'none';
+    $('logview').hidden = !logShown;
     $('logtoggle').textContent = logShown ? 'Hide' : 'Show';
     $('logtoggle').setAttribute('aria-expanded', logShown ? 'true' : 'false');
     if (logShown) loadLog();
@@ -576,6 +578,7 @@ printf '%s' ${shq(b64(pkgs.join('\n')))} | base64 -d > $D/whitelist && echo ok
 
   refresh();
   loadApps();
+  setTimeout(() => document.body.classList.remove('booting'), 700);
   setInterval(() => {
     if (!document.hidden && !state.selectMode) refresh();
   }, 6000);
