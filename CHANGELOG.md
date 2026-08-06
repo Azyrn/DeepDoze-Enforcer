@@ -4,9 +4,15 @@
 
 ### WebUI
 - Redesigned with a clean Material 3 Expressive layout and clearer task-focused language
-- Added accessible light and dark themes with a persistent theme switch
-- Reorganized engine status, drain readings, sleep modes, safety controls and app exceptions for faster scanning
-- Added responsive phone layouts, larger touch targets, visible keyboard focus and reduced-motion support
+- Every section follows the same layout: title, one card, short note
+- Compact sticky top bar in place of the large brand header
+- Restriction modes are four list rows instead of a 2x2 card grid
+- Force deep Doze and CPU limit moved into their own System behavior group
+- Drain readings condensed into one card with average, best and highest
+- Smaller type and tighter spacing so more fits on screen
+- Removed decorative shapes and staggered load animations
+- Accessible light and dark themes with a persistent switch, applied before the first paint
+- Responsive phone layouts, larger touch targets, visible keyboard focus and reduced-motion support
 
 ### Safety and compatibility
 - Restores each app's exact previous standby bucket and background app-op instead of forcing `active` / `default`
