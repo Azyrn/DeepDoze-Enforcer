@@ -11,3 +11,11 @@ log() {
 }
 
 log "post-fs-data: no global properties changed"
+
+if [ ! -f "$LOG_DIR/config" ]; then
+    cat >"$LOG_DIR/config" <<EOF
+mode=gentle
+enable_cpu_throttle=false
+enable_force_doze=true
+EOF
+fi
