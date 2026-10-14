@@ -232,6 +232,27 @@ svg {
   background: var(--pressed);
 }
 
+.lang-button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-full);
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease);
+}
+
+.lang-button:active {
+  background: var(--pressed);
+}
+
 .icon-button svg {
   width: 21px;
   height: 21px;
@@ -1216,6 +1237,7 @@ body.selecting .snackbar {
 /* --- Focus ----------------------------------------------------------- */
 
 .icon-button:focus-visible,
+.lang-button:focus-visible,
 .text-button:focus-visible,
 .chip:focus-visible,
 .morebtn:focus-visible,
@@ -1229,6 +1251,7 @@ body.selecting .snackbar {
 
 @media (hover: hover) and (pointer: fine) {
   .icon-button:hover,
+  .lang-button:hover,
   .chip:hover,
   .text-button:hover,
   .morebtn:hover,
