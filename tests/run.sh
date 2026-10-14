@@ -255,6 +255,7 @@ for script in "$ROOT"/*.sh "$ROOT"/META-INF/com/google/android/update-binary; do
     sh -n "$script"
 done
 node --check "$ROOT/webroot/app.js"
+node --check "$ROOT/webroot/i18n.js"
 node "$ROOT/tests/webui-check.js"
 node "$ROOT/tests/whitelist-roundtrip.js"
 echo "ok $((pass + 1)) - shell, JavaScript, and WebUI structure"

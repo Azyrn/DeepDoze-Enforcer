@@ -6,21 +6,19 @@
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f5f7f5">
 <title>DeepDoze Enforcer</title>
+<script src="i18n.js"></script>
 <script>
 (function () {
   try {
     var s = localStorage.getItem('deepdoze-theme');
     var dark = s === 'dark' || (s !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-    var l = localStorage.getItem('deepdoze-lang');
-    if (l !== 'en' && l !== 'zh') l = /^zh\b/i.test(navigator.language || '') ? 'zh' : 'en';
-    document.documentElement.dataset.lang = l;
-    document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en';
+    var l = null;
+    try { l = localStorage.getItem('deepdoze-lang'); } catch (_) {}
+    DD_applyLang(DD_resolveLang(l));
   } catch (_) {
     document.documentElement.dataset.theme = 'light';
-    var f = /^zh\b/i.test(navigator.language || '') ? 'zh' : 'en';
-    document.documentElement.dataset.lang = f;
-    document.documentElement.lang = f === 'zh' ? 'zh-CN' : 'en';
+    DD_applyLang(DD_resolveLang(null));
   }
 })();
 </script>
@@ -34,11 +32,14 @@
       </span>
       <div class="brand-text">
         <h1>DeepDoze Enforcer</h1>
-        <p data-i18n="brand.subtitle">手机睡眠时的电池控制</p>
+        <p data-i18n="brand.subtitle">Battery control while your phone sleeps</p>
       </div>
-      <span class="ver" id="ver" title="模块版本" data-i18n-title="ver.title">…</span>
-      <button class="lang-button" id="langToggle" type="button" aria-label="切换语言" title="切换语言">EN</button>
-      <button class="icon-button" id="themeToggle" type="button" aria-label="切换主题" title="切换主题">
+      <span class="ver" id="ver" title="Module version" data-i18n-title="ver.title">…</span>
+      <label class="lang-button" id="langPick" title="Language">
+        <span id="langCode" aria-hidden="true">EN</span>
+        <select id="langSelect" aria-label="Language" data-i18n-aria="lang.label"></select>
+      </label>
+      <button class="icon-button" id="themeToggle" type="button" aria-label="Switch theme" title="Switch theme">
         <svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/>
         </svg>
@@ -52,12 +53,12 @@
   <main class="content">
     <div class="rootwarn" id="rootwarn" role="alert">
       <span class="notice-icon" aria-hidden="true">!</span>
-      <span><b data-i18n="rootwarn.title">无法获取 Root 权限。</b> <span data-i18n="rootwarn.body">请从 KernelSU、APatch 或 MMRL 打开此页面，以便控制模块。</span></span>
+      <span><b data-i18n="rootwarn.title">Root access unavailable.</b> <span data-i18n="rootwarn.body">Open this page from KernelSU, APatch, or MMRL so it can control the module.</span></span>
     </div>
 
     <section class="group" aria-labelledby="engineTitle">
       <div class="group-header">
-        <h2 class="group-title" id="engineTitle" data-i18n="engine.title">睡眠引擎</h2>
+        <h2 class="group-title" id="engineTitle" data-i18n="engine.title">Sleep engine</h2>
       </div>
       <div class="card engine-card is-off" id="engineCard">
         <div class="row">
@@ -65,10 +66,10 @@
             <svg viewBox="0 0 24 24"><path d="M18.7 15.1A7.7 7.7 0 0 1 8.9 5.3 8.1 8.1 0 1 0 18.7 15Z"/></svg>
           </span>
           <span class="row-body">
-            <span class="row-title" data-i18n="engine.label">自动省电</span>
-            <span class="row-desc" id="engineTag" data-i18n="engine.checking" aria-live="polite">正在检查引擎…</span>
+            <span class="row-title" data-i18n="engine.label">Save power automatically</span>
+            <span class="row-desc" id="engineTag" data-i18n="engine.checking" aria-live="polite">Checking engine…</span>
           </span>
-          <label class="sw hero-switch" aria-label="睡眠引擎" data-i18n-aria="engine.title">
+          <label class="sw hero-switch" aria-label="Sleep engine" data-i18n-aria="engine.title">
             <input type="checkbox" role="switch" id="master" disabled>
             <span class="track"><span class="thumb"></span></span>
           </label>
@@ -79,34 +80,34 @@
 
     <section class="group" aria-labelledby="drainTitle">
       <div class="group-header">
-        <h2 class="group-title" id="drainTitle" data-i18n="drain.title">睡眠耗电</h2>
+        <h2 class="group-title" id="drainTitle" data-i18n="drain.title">Sleep drain</h2>
         <span class="group-meta" id="drainMeta"></span>
       </div>
       <div class="card stat-card" id="hero">
         <div class="stat stat-primary">
-          <span class="stat-label" data-i18n="drain.avg">平均电流</span>
+          <span class="stat-label" data-i18n="drain.avg">Average current</span>
           <span class="stat-value" id="avgma">—<small>mA</small></span>
-          <span class="stat-note" id="drainSub" data-i18n="drain.lock">锁定手机开始测量</span>
+          <span class="stat-note" id="drainSub" data-i18n="drain.lock">Lock your phone to start measuring</span>
         </div>
         <div class="stat">
-          <span class="stat-label" data-i18n="drain.best">最低</span>
+          <span class="stat-label" data-i18n="drain.best">Best</span>
           <span class="stat-value stat-value-sm" id="minma">—</span>
         </div>
         <div class="stat">
-          <span class="stat-label" data-i18n="drain.highest">最高</span>
+          <span class="stat-label" data-i18n="drain.highest">Highest</span>
           <span class="stat-value stat-value-sm" id="maxma">—</span>
         </div>
       </div>
-      <p class="group-note" data-i18n="drain.note">请与您自己的基线对比。正常电流因设备、应用、信号和环境显示设置而异。</p>
+      <p class="group-note" data-i18n="drain.note">Compare this reading with your own baseline. Normal current varies by device, apps, signal, and ambient display settings.</p>
     </section>
 
     <section class="group" aria-labelledby="behaviorTitle">
       <div class="group-header">
-        <h2 class="group-title" id="behaviorTitle" data-i18n="restrict.title">应用限制</h2>
+        <h2 class="group-title" id="behaviorTitle" data-i18n="restrict.title">App restriction</h2>
       </div>
-      <p class="group-desc" data-i18n="restrict.desc">屏幕关闭时后台应用的处理方式。下次锁定时生效。</p>
+      <p class="group-desc" data-i18n="restrict.desc">How background apps are treated while the screen is off. Applies at the next lock.</p>
 
-      <div class="card" role="radiogroup" aria-label="应用限制模式" data-i18n-aria="restrict.aria" id="modeGroup">
+      <div class="card" role="radiogroup" aria-label="App restriction mode" data-i18n-aria="restrict.aria" id="modeGroup">
         <label class="row row-choice">
           <input type="radio" name="mode" value="gentle">
           <span class="row-state" aria-hidden="true"></span>
@@ -114,8 +115,8 @@
             <svg viewBox="0 0 24 24"><path d="M19.8 4.2C13 4.4 7.1 7.2 5.3 12.1c-1 2.8-.1 5.2 1.5 6.6 1.8-5 5.3-8.2 9.7-10.2-3.7 2.5-6.3 5.8-7.6 10.1 3.1.5 6-.8 7.8-3.6 2-3.1 2.3-7 3.1-10.8Z"/></svg>
           </span>
           <span class="row-body">
-            <span class="row-title"><span data-i18n="mode.gentle">温和</span><span class="badge badge-accent" data-i18n="mode.rec">推荐</span></span>
-            <span class="row-desc" data-i18n="mode.gentle.desc">推迟后台任务。通知延迟的可能性最低。</span>
+            <span class="row-title"><span data-i18n="mode.gentle">Gentle</span><span class="badge badge-accent" data-i18n="mode.rec">Recommended</span></span>
+            <span class="row-desc" data-i18n="mode.gentle.desc">Defers background work. Lowest chance of delayed notifications.</span>
           </span>
           <span class="radio" aria-hidden="true"></span>
         </label>
@@ -127,8 +128,8 @@
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" stroke="none"/></svg>
           </span>
           <span class="row-body">
-            <span class="row-title" data-i18n="mode.balanced">均衡</span>
-            <span class="row-desc" data-i18n="mode.balanced.desc">同时阻止后台活动。通知和同步可能会延迟到达。</span>
+            <span class="row-title" data-i18n="mode.balanced">Balanced</span>
+            <span class="row-desc" data-i18n="mode.balanced.desc">Also blocks background activity. Notifications and sync can arrive later.</span>
           </span>
           <span class="radio" aria-hidden="true"></span>
         </label>
@@ -140,8 +141,8 @@
             <svg viewBox="0 0 24 24"><path d="m13.2 2-7 11h5.2l-.6 9 7-12h-5.2l.6-8Z"/></svg>
           </span>
           <span class="row-body">
-            <span class="row-title" data-i18n="mode.aggressive">激进</span>
-            <span class="row-desc" data-i18n="mode.aggressive.desc">强制停止空闲应用。部分通知需等到您打开应用。</span>
+            <span class="row-title" data-i18n="mode.aggressive">Aggressive</span>
+            <span class="row-desc" data-i18n="mode.aggressive.desc">Force-stops idle apps. Some notifications wait until you open the app.</span>
           </span>
           <span class="radio" aria-hidden="true"></span>
         </label>
@@ -153,8 +154,8 @@
             <svg viewBox="0 0 24 24"><path d="M8 6v12M16 6v12"/></svg>
           </span>
           <span class="row-body">
-            <span class="row-title" data-i18n="mode.off">应用保持不变</span>
-            <span class="row-desc" data-i18n="mode.off.desc">不改变应用状态。下方启用时深度 Doze 仍可运行。</span>
+            <span class="row-title" data-i18n="mode.off">Apps unchanged</span>
+            <span class="row-desc" data-i18n="mode.off.desc">Leaves app state alone. Deep Doze can still run when enabled below.</span>
           </span>
           <span class="radio" aria-hidden="true"></span>
         </label>
@@ -163,7 +164,7 @@
 
     <section class="group" aria-labelledby="systemTitle">
       <div class="group-header">
-        <h2 class="group-title" id="systemTitle" data-i18n="system.title">系统行为</h2>
+        <h2 class="group-title" id="systemTitle" data-i18n="system.title">System behavior</h2>
       </div>
       <div class="card">
         <div class="row">
@@ -171,74 +172,74 @@
             <svg viewBox="0 0 24 24"><path d="M18.7 15.1A7.7 7.7 0 0 1 8.9 5.3 8.1 8.1 0 1 0 18.7 15Z"/></svg>
           </span>
           <span class="row-body">
-            <span class="row-title" data-i18n="system.doze">强制深度 Doze</span>
-            <span class="row-desc" data-i18n="system.doze.desc">屏幕关闭后进入 Android 最深度的空闲状态。</span>
+            <span class="row-title" data-i18n="system.doze">Force deep Doze</span>
+            <span class="row-desc" data-i18n="system.doze.desc">Enter Android’s deepest idle state after the screen turns off.</span>
           </span>
-          <label class="sw"><input type="checkbox" role="switch" id="cfgDoze" aria-label="强制深度 Doze" data-i18n-aria="system.doze"><span class="track"><span class="thumb"></span></span></label>
+          <label class="sw"><input type="checkbox" role="switch" id="cfgDoze" aria-label="Force deep Doze" data-i18n-aria="system.doze"><span class="track"><span class="thumb"></span></span></label>
         </div>
         <div class="row">
           <span class="row-icon warn" aria-hidden="true">
             <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>
           </span>
           <span class="row-body">
-            <span class="row-title"><span data-i18n="system.cpu">睡眠时限制 CPU</span><span class="badge" data-i18n="system.cpu.exp">实验性</span></span>
-            <span class="row-desc" data-i18n="system.cpu.desc">使用内核或性能管理器时请保持关闭。</span>
+            <span class="row-title"><span data-i18n="system.cpu">Limit CPU while asleep</span><span class="badge" data-i18n="system.cpu.exp">Experimental</span></span>
+            <span class="row-desc" data-i18n="system.cpu.desc">Leave off when using a kernel or performance manager.</span>
           </span>
-          <label class="sw"><input type="checkbox" role="switch" id="cfgCpu" aria-label="睡眠时限制 CPU" data-i18n-aria="system.cpu"><span class="track"><span class="thumb"></span></span></label>
+          <label class="sw"><input type="checkbox" role="switch" id="cfgCpu" aria-label="Limit CPU while asleep" data-i18n-aria="system.cpu"><span class="track"><span class="thumb"></span></span></label>
         </div>
       </div>
-      <p class="group-note" data-i18n="system.note">解锁时恢复更改，充电或通话期间暂停。其他管理器设置的新值将被保留。</p>
+      <p class="group-note" data-i18n="system.note">Changes are restored when you unlock, and paused during charging or calls. Newer values set by another manager are preserved.</p>
     </section>
 
     <section class="group" aria-labelledby="appsTitle">
       <div class="group-header">
-        <h2 class="group-title" id="appsTitle" data-i18n="apps.title">受保护的应用</h2>
+        <h2 class="group-title" id="appsTitle" data-i18n="apps.title">Protected apps</h2>
         <span class="group-meta" id="appMeta"></span>
       </div>
-      <p class="group-desc" data-i18n="apps.desc">屏幕关闭时仍正常运行的应用。</p>
+      <p class="group-desc" data-i18n="apps.desc">Apps that keep running normally while the screen is off.</p>
 
       <div class="toolbar">
         <label class="search-wrap" for="appsearch">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
-          <input id="appsearch" class="search" type="search" placeholder="搜索应用或包名" data-i18n-placeholder="apps.search" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <input id="appsearch" class="search" type="search" placeholder="Search apps or package names" data-i18n-placeholder="apps.search" autocapitalize="off" autocorrect="off" spellcheck="false">
         </label>
         <div class="filterbar">
-          <div class="chips" role="group" aria-label="应用列表筛选" data-i18n-aria="apps.filters.aria">
-            <button class="chip" type="button" data-filter="all" aria-pressed="true" data-i18n="apps.filter.all">全部</button>
-            <button class="chip" type="button" data-filter="protected" aria-pressed="false" data-i18n="apps.filter.protected">受保护</button>
-            <button class="chip" type="button" data-filter="paused" aria-pressed="false" data-i18n="apps.filter.paused">已限制</button>
-            <button class="chip" type="button" id="sysChip" aria-pressed="false" data-i18n="apps.filter.sys">系统应用</button>
+          <div class="chips" role="group" aria-label="App list filters" data-i18n-aria="apps.filters.aria">
+            <button class="chip" type="button" data-filter="all" aria-pressed="true" data-i18n="apps.filter.all">All</button>
+            <button class="chip" type="button" data-filter="protected" aria-pressed="false" data-i18n="apps.filter.protected">Protected</button>
+            <button class="chip" type="button" data-filter="paused" aria-pressed="false" data-i18n="apps.filter.paused">Restricted</button>
+            <button class="chip" type="button" id="sysChip" aria-pressed="false" data-i18n="apps.filter.sys">System apps</button>
             <button class="chip" type="button" id="sortChip" aria-pressed="false" data-i18n="apps.sort.az">A–Z</button>
           </div>
-          <button class="chip chip-action" type="button" id="selectChip" aria-pressed="false" data-i18n="apps.select">选择</button>
+          <button class="chip chip-action" type="button" id="selectChip" aria-pressed="false" data-i18n="apps.select">Select</button>
         </div>
       </div>
 
-      <div class="card app-list" id="applist"><div class="empty" data-i18n="apps.loading">正在加载应用…</div></div>
-      <p class="group-note" data-i18n="apps.note">时钟、闹钟和 root 管理器包始终受保护。Android 电池豁免应用会自动被尊重。Doze 本身可能仍会影响受保护的应用。</p>
+      <div class="card app-list" id="applist"><div class="empty" data-i18n="apps.loading">Loading apps…</div></div>
+      <p class="group-note" data-i18n="apps.note">Clock, alarm, and root-manager packages are always protected. Android battery-exempt apps are respected automatically. Doze itself may still affect protected apps.</p>
     </section>
 
     <section class="group" aria-labelledby="activityTitle">
       <div class="group-header">
-        <h2 class="group-title" id="activityTitle" data-i18n="activity.title">最近活动</h2>
-        <button class="text-button" type="button" id="logtoggle" aria-expanded="false" aria-controls="logview" data-i18n="activity.show">显示</button>
+        <h2 class="group-title" id="activityTitle" data-i18n="activity.title">Recent activity</h2>
+        <button class="text-button" type="button" id="logtoggle" aria-expanded="false" aria-controls="logview" data-i18n="activity.show">Show</button>
       </div>
-      <div class="card events" id="logview" hidden><div class="empty" data-i18n="activity.empty">暂无活动。锁定手机后会出现事件。</div></div>
+      <div class="card events" id="logview" hidden><div class="empty" data-i18n="activity.empty">No activity yet. Events appear after you lock your phone.</div></div>
     </section>
 
     <footer class="foot">
       <span>DeepDoze Enforcer</span>
       <span class="foot-sep" aria-hidden="true">·</span>
-      <span>Magisk、KernelSU、APatch</span>
-      <a href="https://t.me/necotinx" data-ext="https://t.me/necotinx" data-i18n="footer.support">支持</a>
+      <span>Magisk, KernelSU, APatch</span>
+      <a href="https://t.me/necotinx" data-ext="https://t.me/necotinx" data-i18n="footer.support">Support</a>
     </footer>
   </main>
 
   <div class="bulkbar" id="bulkbar">
-    <span class="bulk-count" id="bulkCount">已选 0 个</span>
-    <button class="button button-primary" type="button" id="bulkProtect" data-i18n="apps.bulkprotect">保护</button>
-    <button class="button" type="button" id="bulkUnprotect" data-i18n="apps.bulkunprotect">取消保护</button>
-    <button class="button button-icon" type="button" id="bulkCancel" aria-label="取消选择" data-i18n-aria="apps.bulkcancel">
+    <span class="bulk-count" id="bulkCount">0 selected</span>
+    <button class="button button-primary" type="button" id="bulkProtect" data-i18n="apps.bulkprotect">Protect</button>
+    <button class="button" type="button" id="bulkUnprotect" data-i18n="apps.bulkunprotect">Unprotect</button>
+    <button class="button button-icon" type="button" id="bulkCancel" aria-label="Cancel selection" data-i18n-aria="apps.bulkcancel">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
   </div>

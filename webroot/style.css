@@ -253,6 +253,21 @@ svg {
   background: var(--pressed);
 }
 
+/* The native select covers the pill so the system picker opens on tap. */
+.lang-button {
+  position: relative;
+}
+
+.lang-button select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+
 .icon-button svg {
   width: 21px;
   height: 21px;
@@ -584,7 +599,7 @@ html[data-theme="dark"] .theme-moon {
 }
 
 .stat-value small {
-  margin-left: 4px;
+  margin-inline-start: 4px;
   color: var(--muted);
   font-size: 15px;
   font-weight: 600;
@@ -714,7 +729,7 @@ html[data-theme="dark"] .theme-moon {
 .sw .thumb {
   position: absolute;
   top: 5px;
-  left: 5px;
+  inset-inline-start: 5px;
   width: 14px;
   height: 14px;
   border-radius: 50%;
@@ -731,6 +746,10 @@ html[data-theme="dark"] .theme-moon {
   width: 18px;
   transform: translateX(18px);
   background: var(--on-primary);
+}
+
+[dir="rtl"] .sw input:checked ~ .track .thumb {
+  transform: translateX(-18px);
 }
 
 .sw input:focus-visible ~ .track {
@@ -832,6 +851,11 @@ html[data-theme="dark"] .theme-moon {
   scrollbar-width: none;
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
   mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+}
+
+[dir="rtl"] .chips {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 16px), transparent);
 }
 
 .chips::-webkit-scrollbar {
@@ -1070,7 +1094,7 @@ html[data-theme="dark"] .avatar {
 
 .events .ev .when {
   flex: 0 0 auto;
-  margin-left: 8px;
+  margin-inline-start: 8px;
   color: var(--muted);
   font-size: 11px;
   white-space: nowrap;
@@ -1134,7 +1158,7 @@ html[data-theme="dark"] .avatar {
 }
 
 .bulk-count {
-  margin-right: 4px;
+  margin-inline-end: 4px;
   color: var(--text);
   font-size: 13px;
   font-weight: 600;
@@ -1224,7 +1248,7 @@ body.selecting .snackbar {
 }
 
 .foot a {
-  margin-left: 6px;
+  margin-inline-start: 6px;
   color: var(--primary);
   font-weight: 600;
   text-decoration: none;
@@ -1237,7 +1261,7 @@ body.selecting .snackbar {
 /* --- Focus ----------------------------------------------------------- */
 
 .icon-button:focus-visible,
-.lang-button:focus-visible,
+.lang-button:focus-within,
 .text-button:focus-visible,
 .chip:focus-visible,
 .morebtn:focus-visible,

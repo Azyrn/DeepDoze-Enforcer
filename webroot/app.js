@@ -7,279 +7,20 @@
   const b64 = (s) => btoa(unescape(encodeURIComponent(s)));
   const PKG_RE = /^[a-zA-Z][a-zA-Z0-9_.]*$/;
 
-  const I18N = {
-    zh: {
-      'brand.subtitle': '手机睡眠时的电池控制',
-      'ver.title': '模块版本',
+  const I18N = window.DD_I18N;
+  const LANGS = window.DD_LANGS;
+  let lang = document.documentElement.dataset.lang || 'en';
 
-      'lang.to.zh': '切换到中文',
-      'lang.to.en': '切换到英文',
-      'theme.to.dark': '切换到深色主题',
-      'theme.to.light': '切换到浅色主题',
-
-      'rootwarn.title': '无法获取 Root 权限。',
-      'rootwarn.body': '请从 KernelSU、APatch 或 MMRL 打开此页面，以便控制模块。',
-
-      'engine.title': '睡眠引擎',
-      'engine.label': '自动省电',
-      'engine.checking': '正在检查引擎…',
-      'engine.active': '已激活 — 锁定时生效',
-      'engine.active.charging': '已激活 — 充电中暂停',
-      'engine.off': '已关闭 — Android 电池管理仍生效',
-      'engine.running': '运行中',
-      'engine.stopped': '已停止',
-      'engine.charging': '充电中',
-      'engine.restricted': '{n} 个应用在上次锁定时被暂停',
-      'engine.starting': '正在启动…',
-      'engine.stopping': '正在停止…',
-      'engine.started': '引擎已启动',
-      'engine.stopped.msg': '引擎已停止 — 限制已解除',
-      'engine.start.fail': '无法启动引擎',
-      'engine.stop.fail': '无法停止引擎',
-
-      'drain.title': '睡眠耗电',
-      'drain.avg': '平均电流',
-      'drain.best': '最低',
-      'drain.highest': '最高',
-      'drain.lock': '锁定手机开始测量',
-      'drain.on': '开启引擎，然后锁定手机',
-      'drain.measured': '锁定时从电池测量',
-      'drain.last': '上次锁定会话',
-      'drain.note': '请与您自己的基线对比。正常电流因设备、应用、信号和环境显示设置而异。',
-
-      'restrict.title': '应用限制',
-      'restrict.desc': '屏幕关闭时后台应用的处理方式。下次锁定时生效。',
-      'restrict.aria': '应用限制模式',
-
-      'mode.gentle': '温和',
-      'mode.gentle.desc': '推迟后台任务。通知延迟的可能性最低。',
-      'mode.balanced': '均衡',
-      'mode.balanced.desc': '同时阻止后台活动。通知和同步可能会延迟到达。',
-      'mode.aggressive': '激进',
-      'mode.aggressive.desc': '强制停止空闲应用。部分通知需等到您打开应用。',
-      'mode.off': '应用保持不变',
-      'mode.off.desc': '不改变应用状态。下方启用时深度 Doze 仍可运行。',
-      'mode.rec': '推荐',
-
-      'system.title': '系统行为',
-      'system.doze': '强制深度 Doze',
-      'system.doze.desc': '屏幕关闭后进入 Android 最深度的空闲状态。',
-      'system.cpu': '睡眠时限制 CPU',
-      'system.cpu.exp': '实验性',
-      'system.cpu.desc': '使用内核或性能管理器时请保持关闭。',
-      'system.note': '解锁时恢复更改，充电或通话期间暂停。其他管理器设置的新值将被保留。',
-
-      'apps.title': '受保护的应用',
-      'apps.desc': '屏幕关闭时仍正常运行的应用。',
-      'apps.search': '搜索应用或包名',
-      'apps.filter.all': '全部',
-      'apps.filter.protected': '受保护',
-      'apps.filter.paused': '已限制',
-      'apps.filter.sys': '系统应用',
-      'apps.sort.az': 'A–Z',
-      'apps.sort.prot': '受保护优先',
-      'apps.select': '选择',
-      'apps.loading': '正在加载应用…',
-      'apps.filters.aria': '应用列表筛选',
-      'apps.none': '这里没有应用。',
-      'apps.nomatch': '没有匹配 “{q}” 的应用。',
-      'apps.more': '显示另外 {n} 个',
-      'apps.meta': '受保护 {a} 个 · {b} 个应用',
-      'apps.loadfail': '无法读取应用列表。',
-      'apps.always': '始终',
-      'apps.osexempt': '系统豁免',
-      'apps.protect.aria': '保护 {name}',
-      'apps.bulkcount': '已选 {n} 个',
-      'apps.bulkprotect': '保护',
-      'apps.bulkunprotect': '取消保护',
-      'apps.bulkcancel': '取消选择',
-      'apps.select.first': '请先点击应用进行选择',
-      'apps.bulk.protect': '已保护 {n} 个应用',
-      'apps.bulk.unprotect': '已取消保护 {n} 个应用',
-      'apps.always.msg': '始终受保护 — 无法更改',
-      'apps.osexempt.msg': '受 Android 电池豁免保护',
-      'apps.note': '时钟、闹钟和 root 管理器包始终受保护。Android 电池豁免应用会自动被尊重。Doze 本身可能仍会影响受保护的应用。',
-
-      'activity.title': '最近活动',
-      'activity.show': '显示',
-      'activity.hide': '隐藏',
-      'activity.empty': '暂无活动。锁定手机后会出现事件。',
-
-      'save.ok': '已保存 — 下次锁定时生效',
-      'save.fail': '无法保存设置',
-      'wl.save.fail': '无法保存受保护的应用',
-
-      'ev.start': '引擎已启动',
-      'ev.start.d': '{mode} 模式 · 等待锁定',
-      'ev.sleep': '进入深度睡眠',
-      'ev.sleep.d': '手机已锁定 — CPU 已降低',
-      'ev.unlock': '已解锁',
-      'ev.unlock.d': '性能已完全恢复',
-      'ev.paused': '已暂停 {n} 个后台应用',
-      'ev.paused.d': '{mode} 模式 · 受保护的应用保持运行',
-      'ev.resumed': '已恢复后台应用',
-      'ev.resumed.d': '您已解锁手机',
-      'ev.feed': '即时解锁检测已就绪',
-      'ev.feed.d': '响应屏幕事件，而非轮询',
-      'ev.seeded': '已保护默认应用',
-      'ev.seeded.d': '拨号、短信、键盘和桌面保持唤醒',
-
-      'time.justnow': '刚刚',
-      'time.min': '{m} 分钟前',
-      'time.hour': '{h} 小时 {m} 分钟前',
-      'time.day': '{d} 天前',
-
-      'doze.idle': '深度休眠中',
-      'doze.maint': 'Doze 维护',
-      'doze.entering': '正在进入 Doze',
-      'doze.awake': '唤醒',
-
-      'modename.gentle': '温和',
-      'modename.balanced': '均衡',
-      'modename.aggressive': '激进',
-      'modename.off': '关闭',
-
-      'footer.support': '支持'
-    },
-    en: {
-      'brand.subtitle': 'Battery control while your phone sleeps',
-      'ver.title': 'Module version',
-
-      'lang.to.zh': 'Switch to Chinese',
-      'lang.to.en': 'Switch to English',
-      'theme.to.dark': 'Switch to dark theme',
-      'theme.to.light': 'Switch to light theme',
-
-      'rootwarn.title': 'Root access unavailable.',
-      'rootwarn.body': 'Open this page from KernelSU, APatch, or MMRL so it can control the module.',
-
-      'engine.title': 'Sleep engine',
-      'engine.label': 'Save power automatically',
-      'engine.checking': 'Checking engine…',
-      'engine.active': 'Active — engages when you lock',
-      'engine.active.charging': 'Active — paused while charging',
-      'engine.off': 'Off — Android battery management still applies',
-      'engine.running': 'Running',
-      'engine.stopped': 'Stopped',
-      'engine.charging': 'charging',
-      'engine.restricted': '{n} apps paused at last lock',
-      'engine.starting': 'Starting…',
-      'engine.stopping': 'Stopping…',
-      'engine.started': 'Engine started',
-      'engine.stopped.msg': 'Engine stopped — restrictions lifted',
-      'engine.start.fail': 'Could not start the engine',
-      'engine.stop.fail': 'Could not stop the engine',
-
-      'drain.title': 'Sleep drain',
-      'drain.avg': 'Average current',
-      'drain.best': 'Best',
-      'drain.highest': 'Highest',
-      'drain.lock': 'Lock your phone to start measuring',
-      'drain.on': 'Turn the engine on, then lock your phone',
-      'drain.measured': 'Measured from the battery while locked',
-      'drain.last': 'Last locked session',
-      'drain.note': 'Compare this reading with your own baseline. Normal current varies by device, apps, signal, and ambient display settings.',
-
-      'restrict.title': 'App restriction',
-      'restrict.desc': 'How background apps are treated while the screen is off. Applies at the next lock.',
-      'restrict.aria': 'App restriction mode',
-
-      'mode.gentle': 'Gentle',
-      'mode.gentle.desc': 'Defers background work. Lowest chance of delayed notifications.',
-      'mode.balanced': 'Balanced',
-      'mode.balanced.desc': 'Also blocks background activity. Notifications and sync can arrive later.',
-      'mode.aggressive': 'Aggressive',
-      'mode.aggressive.desc': 'Force-stops idle apps. Some notifications wait until you open the app.',
-      'mode.off': 'Apps unchanged',
-      'mode.off.desc': 'Leaves app state alone. Deep Doze can still run when enabled below.',
-      'mode.rec': 'Recommended',
-
-      'system.title': 'System behavior',
-      'system.doze': 'Force deep Doze',
-      'system.doze.desc': 'Enter Android’s deepest idle state after the screen turns off.',
-      'system.cpu': 'Limit CPU while asleep',
-      'system.cpu.exp': 'Experimental',
-      'system.cpu.desc': 'Leave off when using a kernel or performance manager.',
-      'system.note': 'Changes are restored when you unlock, and paused during charging or calls. Newer values set by another manager are preserved.',
-
-      'apps.title': 'Protected apps',
-      'apps.desc': 'Apps that keep running normally while the screen is off.',
-      'apps.search': 'Search apps or package names',
-      'apps.filter.all': 'All',
-      'apps.filter.protected': 'Protected',
-      'apps.filter.paused': 'Restricted',
-      'apps.filter.sys': 'System apps',
-      'apps.sort.az': 'A–Z',
-      'apps.sort.prot': 'Protected first',
-      'apps.select': 'Select',
-      'apps.loading': 'Loading apps…',
-      'apps.filters.aria': 'App list filters',
-      'apps.none': 'No apps here.',
-      'apps.nomatch': 'No apps match “{q}”.',
-      'apps.more': 'Show {n} more',
-      'apps.meta': '{a} protected · {b} apps',
-      'apps.loadfail': 'Could not read the app list.',
-      'apps.always': 'always',
-      'apps.osexempt': 'OS-exempt',
-      'apps.protect.aria': 'Protect {name}',
-      'apps.bulkcount': '{n} selected',
-      'apps.bulkprotect': 'Protect',
-      'apps.bulkunprotect': 'Unprotect',
-      'apps.bulkcancel': 'Cancel selection',
-      'apps.select.first': 'Tap apps to select them first',
-      'apps.bulk.protect': 'Protected {n} app',
-      'apps.bulk.unprotect': 'Unprotected {n} app',
-      'apps.always.msg': 'Always protected — can’t change',
-      'apps.osexempt.msg': 'Protected by Android’s battery exemption',
-      'apps.note': 'Clock, alarm, and root-manager packages are always protected. Android battery-exempt apps are respected automatically. Doze itself may still affect protected apps.',
-
-      'activity.title': 'Recent activity',
-      'activity.show': 'Show',
-      'activity.hide': 'Hide',
-      'activity.empty': 'No activity yet. Events appear after you lock your phone.',
-
-      'save.ok': 'Saved — applies at next lock',
-      'save.fail': 'Could not save settings',
-      'wl.save.fail': 'Could not save protected apps',
-
-      'ev.start': 'Engine started',
-      'ev.start.d': '{mode} mode · watching for lock',
-      'ev.sleep': 'Entered deep sleep',
-      'ev.sleep.d': 'Phone locked — CPU eased back',
-      'ev.unlock': 'Unlocked',
-      'ev.unlock.d': 'Full performance restored',
-      'ev.paused': 'Paused {n} background app',
-      'ev.paused.d': '{mode} mode · protected apps kept running',
-      'ev.resumed': 'Resumed background apps',
-      'ev.resumed.d': 'You unlocked your phone',
-      'ev.feed': 'Instant unlock detection ready',
-      'ev.feed.d': 'Reacting to screen events, not polling',
-      'ev.seeded': 'Default apps protected',
-      'ev.seeded.d': 'Dialer, SMS, keyboard and launcher kept awake',
-
-      'time.justnow': 'just now',
-      'time.min': '{m} min ago',
-      'time.hour': '{h}h {m}m ago',
-      'time.day': '{d}d ago',
-
-      'doze.idle': 'Dozing',
-      'doze.maint': 'Doze maintenance',
-      'doze.entering': 'Entering doze',
-      'doze.awake': 'Awake',
-
-      'modename.gentle': 'Gentle',
-      'modename.balanced': 'Balanced',
-      'modename.aggressive': 'Aggressive',
-      'modename.off': 'Off',
-
-      'footer.support': 'Support'
-    }
-  };
-
-  let lang = document.documentElement.dataset.lang === 'zh' ? 'zh' : 'en';
+  function pluralOf(n) {
+    const meta = LANGS.find((l) => l.code === lang) || LANGS[0];
+    try { return new Intl.PluralRules(meta.locale).select(n); } catch (_) { return n === 1 ? 'one' : 'other'; }
+  }
 
   function t(key, vars) {
-    let s = (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
+    const n = vars && vars.n !== undefined && vars.n !== '' ? Number(vars.n) : NaN;
+    const cat = isNaN(n) ? '' : '#' + pluralOf(n);
+    const pick = (dict) => dict && ((cat && dict[key + cat]) || dict[key]);
+    let s = pick(I18N[lang]) || pick(I18N.en) || key;
     if (vars) {
       Object.keys(vars).forEach((k) => { s = s.split('{' + k + '}').join(vars[k]); });
     }
@@ -302,12 +43,14 @@
   }
 
   function updateLangButton() {
-    const b = $('langToggle');
-    const to = lang === 'zh' ? 'en' : 'zh';
-    b.textContent = to === 'zh' ? '文' : 'EN';
-    b.setAttribute('aria-label', to === 'zh' ? t('lang.to.zh') : t('lang.to.en'));
-    b.setAttribute('title', b.getAttribute('aria-label'));
+    const meta = LANGS.find((l) => l.code === lang) || LANGS[0];
+    $('langCode').textContent = meta.short;
+    $('langSelect').value = meta.code;
+    $('langPick').setAttribute('title', t('lang.label'));
   }
+
+  $('langSelect').innerHTML = LANGS.map((l) =>
+    '<option value="' + l.code + '" lang="' + l.locale + '" dir="' + l.dir + '">' + esc(l.name) + '</option>').join('');
 
   const themeMedia = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
   let savedTheme = null;
@@ -337,7 +80,7 @@
     applyTheme(current === 'dark' ? 'light' : 'dark', true);
   });
 
-  $('langToggle').addEventListener('click', () => setLang(lang === 'zh' ? 'en' : 'zh'));
+  $('langSelect').addEventListener('change', (e) => setLang(e.target.value));
 
   if (themeMedia && typeof themeMedia.addEventListener === 'function') {
     themeMedia.addEventListener('change', (event) => {
@@ -802,9 +545,7 @@ printf '%s' ${shq(b64(pkgs.map((p) => p + '\n').join('')))} | base64 -d > $D/whi
   }
 
   function setLang(l) {
-    lang = l === 'zh' ? 'zh' : 'en';
-    document.documentElement.dataset.lang = lang;
-    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    lang = window.DD_applyLang(l).code;
     try { localStorage.setItem('deepdoze-lang', lang); } catch (_) {}
     applyStaticI18n();
     applyTheme(document.documentElement.dataset.theme, false);

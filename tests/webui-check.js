@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'webroot/index.html'), 'utf8');
@@ -41,23 +42,31 @@ if (openBraces !== closeBraces) fail('unbalanced CSS blocks');
 const externalAssets = [...html.matchAll(/<(?:script|link)[^>]+(?:src|href)="(https?:\/\/[^"]+)"/gi)];
 if (externalAssets.length) fail('external runtime assets are not allowed');
 
-const dictKeys = (langName) => {
-  const block = js.match(new RegExp('\\n    ' + langName + ': \\{([\\s\\S]*?)\\n    \\}'));
-  if (!block) fail('missing ' + langName + ' translations');
-  return new Set([...block[1].matchAll(/^\s*'([^']+)':/gm)].map((match) => match[1]));
-};
-const zhKeys = dictKeys('zh');
-const enKeys = dictKeys('en');
+const sandbox = { window: {}, document: {}, navigator: { language: 'en' } };
+vm.runInNewContext(fs.readFileSync(path.join(root, 'webroot/i18n.js'), 'utf8'), sandbox);
+const { DD_I18N: i18n, DD_LANGS: langs } = sandbox.window;
+if (!i18n || !langs || !i18n.en) fail('webroot/i18n.js does not define DD_I18N/DD_LANGS');
+if (!html.includes('<script src="i18n.js"></script>')) fail('index.html does not load i18n.js');
+const baseKeys = (dict) => new Set(Object.keys(dict).filter((key) => !key.includes('#')));
+const enKeys = baseKeys(i18n.en);
 const usedKeys = new Set([
   ...[...html.matchAll(/data-i18n(?:-placeholder|-aria|-title)?="([^"]+)"/g)].map((match) => match[1]),
-  ...[...js.matchAll(/\bt\('([^']+)'/g)].map((match) => match[1])
+  ...[...js.matchAll(/\bt\('([^']+)'/g)].map((match) => match[1]).filter((key) => !key.endsWith('.'))
 ]);
-['zh', 'en'].forEach((langName) => {
-  const keys = langName === 'zh' ? zhKeys : enKeys;
-  const missing = [...usedKeys].filter((key) => !keys.has(key) && !key.endsWith('.'));
-  if (missing.length) fail(langName + ' translations missing: ' + missing.join(', '));
+const unknown = [...usedKeys].filter((key) => !enKeys.has(key));
+if (unknown.length) fail('keys used but not translated: ' + unknown.join(', '));
+const placeholders = (text) => [...text.matchAll(/\{\w+\}/g)].map((match) => match[0]).sort().join();
+langs.forEach(({ code }) => {
+  const dict = i18n[code];
+  if (!dict) fail('no translations for ' + code);
+  const keys = baseKeys(dict);
+  const missing = [...enKeys].filter((key) => !keys.has(key));
+  const extra = [...keys].filter((key) => !enKeys.has(key));
+  if (missing.length) fail(code + ' translations missing: ' + missing.join(', '));
+  if (extra.length) fail(code + ' has unknown keys: ' + extra.join(', '));
+  Object.keys(dict).forEach((key) => {
+    if (placeholders(dict[key]) !== placeholders(i18n.en[key.split('#')[0]])) fail(code + ' ' + key + ' placeholders differ from English');
+  });
 });
-const onlyOne = [...zhKeys].filter((key) => !enKeys.has(key)).concat([...enKeys].filter((key) => !zhKeys.has(key)));
-if (onlyOne.length) fail('translation keys not in both languages: ' + onlyOne.join(', '));
 
 process.stdout.write('WebUI structure, theme, and control bindings passed.\n');
