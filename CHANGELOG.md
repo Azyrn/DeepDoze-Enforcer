@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### WebUI
+- Chinese/English language switch next to the theme toggle (thanks @cat-Logan, #9); follows the device language until you pick one
+
 ### Fixes
 - Protected apps: the alphabetically last app no longer disappears from the list after reopening the WebUI (and is no longer dropped on the next save)
 

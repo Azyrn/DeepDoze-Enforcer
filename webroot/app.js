@@ -10,6 +10,7 @@
   const I18N = {
     zh: {
       'brand.subtitle': '手机睡眠时的电池控制',
+      'ver.title': '模块版本',
 
       'lang.to.zh': '切换到中文',
       'lang.to.en': '切换到英文',
@@ -142,6 +143,7 @@
     },
     en: {
       'brand.subtitle': 'Battery control while your phone sleeps',
+      'ver.title': 'Module version',
 
       'lang.to.zh': 'Switch to Chinese',
       'lang.to.en': 'Switch to English',
@@ -274,7 +276,7 @@
     }
   };
 
-  let lang = document.documentElement.dataset.lang === 'en' ? 'en' : 'zh';
+  let lang = document.documentElement.dataset.lang === 'zh' ? 'zh' : 'en';
 
   function t(key, vars) {
     let s = (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key;
@@ -293,6 +295,9 @@
     });
     document.querySelectorAll('[data-i18n-aria]').forEach((el) => {
       el.setAttribute('aria-label', t(el.getAttribute('data-i18n-aria')));
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+      el.setAttribute('title', t(el.getAttribute('data-i18n-title')));
     });
   }
 
@@ -663,7 +668,7 @@ D=/data/adb/deepdoze; mkdir -p $D
     const avatar = '<span class="avatar" style="--avatar-hue:' + h + '">' +
       (picked ? '✓' : esc(name.charAt(0))) + '</span>';
     const trail = state.selectMode ? '' :
-      '<label class="sw" aria-label="' + t('apps.protect.aria', { name }) + '">' +
+      '<label class="sw" aria-label="' + esc(t('apps.protect.aria', { name })) + '">' +
       '<input type="checkbox" role="switch" data-pkg="' + esc(pkg) + '"' + (prot ? ' checked' : '') + ((essential || osExempt) ? ' disabled' : '') + '>' +
       '<span class="track"><span class="thumb"></span></span></label>';
     return '<div class="approw' + (picked ? ' picked' : '') + '" data-row="' + esc(pkg) + '">' +
@@ -678,7 +683,7 @@ D=/data/adb/deepdoze; mkdir -p $D
     const list = visibleApps();
     const el = $('applist');
     if (!list.length) {
-      el.innerHTML = '<div class="empty">' + (state.q ? t('apps.nomatch', { q: state.q }) : t('apps.none')) + '</div>';
+      el.innerHTML = '<div class="empty">' + (state.q ? t('apps.nomatch', { q: esc(state.q) }) : t('apps.none')) + '</div>';
     } else {
       const shown = list.slice(0, state.limit);
       let html = shown.map(rowHTML).join('');
@@ -797,7 +802,7 @@ printf '%s' ${shq(b64(pkgs.map((p) => p + '\n').join('')))} | base64 -d > $D/whi
   }
 
   function setLang(l) {
-    lang = l === 'en' ? 'en' : 'zh';
+    lang = l === 'zh' ? 'zh' : 'en';
     document.documentElement.dataset.lang = lang;
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
     try { localStorage.setItem('deepdoze-lang', lang); } catch (_) {}

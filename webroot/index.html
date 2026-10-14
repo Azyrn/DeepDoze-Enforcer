@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -13,13 +13,14 @@
     var dark = s === 'dark' || (s !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     var l = localStorage.getItem('deepdoze-lang');
-    if (l !== 'en' && l !== 'zh') l = 'zh';
+    if (l !== 'en' && l !== 'zh') l = /^zh\b/i.test(navigator.language || '') ? 'zh' : 'en';
     document.documentElement.dataset.lang = l;
     document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en';
   } catch (_) {
     document.documentElement.dataset.theme = 'light';
-    document.documentElement.dataset.lang = 'zh';
-    document.documentElement.lang = 'zh-CN';
+    var f = /^zh\b/i.test(navigator.language || '') ? 'zh' : 'en';
+    document.documentElement.dataset.lang = f;
+    document.documentElement.lang = f === 'zh' ? 'zh-CN' : 'en';
   }
 })();
 </script>
@@ -35,7 +36,7 @@
         <h1>DeepDoze Enforcer</h1>
         <p data-i18n="brand.subtitle">手机睡眠时的电池控制</p>
       </div>
-      <span class="ver" id="ver" title="模块版本">…</span>
+      <span class="ver" id="ver" title="模块版本" data-i18n-title="ver.title">…</span>
       <button class="lang-button" id="langToggle" type="button" aria-label="切换语言" title="切换语言">EN</button>
       <button class="icon-button" id="themeToggle" type="button" aria-label="切换主题" title="切换主题">
         <svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true">
@@ -67,7 +68,7 @@
             <span class="row-title" data-i18n="engine.label">自动省电</span>
             <span class="row-desc" id="engineTag" data-i18n="engine.checking" aria-live="polite">正在检查引擎…</span>
           </span>
-          <label class="sw hero-switch" aria-label="睡眠引擎">
+          <label class="sw hero-switch" aria-label="睡眠引擎" data-i18n-aria="engine.title">
             <input type="checkbox" role="switch" id="master" disabled>
             <span class="track"><span class="thumb"></span></span>
           </label>
@@ -105,7 +106,7 @@
       </div>
       <p class="group-desc" data-i18n="restrict.desc">屏幕关闭时后台应用的处理方式。下次锁定时生效。</p>
 
-      <div class="card" role="radiogroup" aria-label="应用限制模式" id="modeGroup">
+      <div class="card" role="radiogroup" aria-label="应用限制模式" data-i18n-aria="restrict.aria" id="modeGroup">
         <label class="row row-choice">
           <input type="radio" name="mode" value="gentle">
           <span class="row-state" aria-hidden="true"></span>
@@ -173,7 +174,7 @@
             <span class="row-title" data-i18n="system.doze">强制深度 Doze</span>
             <span class="row-desc" data-i18n="system.doze.desc">屏幕关闭后进入 Android 最深度的空闲状态。</span>
           </span>
-          <label class="sw"><input type="checkbox" role="switch" id="cfgDoze" aria-label="强制深度 Doze"><span class="track"><span class="thumb"></span></span></label>
+          <label class="sw"><input type="checkbox" role="switch" id="cfgDoze" aria-label="强制深度 Doze" data-i18n-aria="system.doze"><span class="track"><span class="thumb"></span></span></label>
         </div>
         <div class="row">
           <span class="row-icon warn" aria-hidden="true">
@@ -183,7 +184,7 @@
             <span class="row-title"><span data-i18n="system.cpu">睡眠时限制 CPU</span><span class="badge" data-i18n="system.cpu.exp">实验性</span></span>
             <span class="row-desc" data-i18n="system.cpu.desc">使用内核或性能管理器时请保持关闭。</span>
           </span>
-          <label class="sw"><input type="checkbox" role="switch" id="cfgCpu" aria-label="睡眠时限制 CPU"><span class="track"><span class="thumb"></span></span></label>
+          <label class="sw"><input type="checkbox" role="switch" id="cfgCpu" aria-label="睡眠时限制 CPU" data-i18n-aria="system.cpu"><span class="track"><span class="thumb"></span></span></label>
         </div>
       </div>
       <p class="group-note" data-i18n="system.note">解锁时恢复更改，充电或通话期间暂停。其他管理器设置的新值将被保留。</p>
@@ -202,7 +203,7 @@
           <input id="appsearch" class="search" type="search" placeholder="搜索应用或包名" data-i18n-placeholder="apps.search" autocapitalize="off" autocorrect="off" spellcheck="false">
         </label>
         <div class="filterbar">
-          <div class="chips" role="group" aria-label="应用列表筛选">
+          <div class="chips" role="group" aria-label="应用列表筛选" data-i18n-aria="apps.filters.aria">
             <button class="chip" type="button" data-filter="all" aria-pressed="true" data-i18n="apps.filter.all">全部</button>
             <button class="chip" type="button" data-filter="protected" aria-pressed="false" data-i18n="apps.filter.protected">受保护</button>
             <button class="chip" type="button" data-filter="paused" aria-pressed="false" data-i18n="apps.filter.paused">已限制</button>
@@ -237,7 +238,7 @@
     <span class="bulk-count" id="bulkCount">已选 0 个</span>
     <button class="button button-primary" type="button" id="bulkProtect" data-i18n="apps.bulkprotect">保护</button>
     <button class="button" type="button" id="bulkUnprotect" data-i18n="apps.bulkunprotect">取消保护</button>
-    <button class="button button-icon" type="button" id="bulkCancel" aria-label="取消选择">
+    <button class="button button-icon" type="button" id="bulkCancel" aria-label="取消选择" data-i18n-aria="apps.bulkcancel">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
   </div>

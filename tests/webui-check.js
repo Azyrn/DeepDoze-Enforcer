@@ -41,4 +41,23 @@ if (openBraces !== closeBraces) fail('unbalanced CSS blocks');
 const externalAssets = [...html.matchAll(/<(?:script|link)[^>]+(?:src|href)="(https?:\/\/[^"]+)"/gi)];
 if (externalAssets.length) fail('external runtime assets are not allowed');
 
+const dictKeys = (langName) => {
+  const block = js.match(new RegExp('\\n    ' + langName + ': \\{([\\s\\S]*?)\\n    \\}'));
+  if (!block) fail('missing ' + langName + ' translations');
+  return new Set([...block[1].matchAll(/^\s*'([^']+)':/gm)].map((match) => match[1]));
+};
+const zhKeys = dictKeys('zh');
+const enKeys = dictKeys('en');
+const usedKeys = new Set([
+  ...[...html.matchAll(/data-i18n(?:-placeholder|-aria|-title)?="([^"]+)"/g)].map((match) => match[1]),
+  ...[...js.matchAll(/\bt\('([^']+)'/g)].map((match) => match[1])
+]);
+['zh', 'en'].forEach((langName) => {
+  const keys = langName === 'zh' ? zhKeys : enKeys;
+  const missing = [...usedKeys].filter((key) => !keys.has(key) && !key.endsWith('.'));
+  if (missing.length) fail(langName + ' translations missing: ' + missing.join(', '));
+});
+const onlyOne = [...zhKeys].filter((key) => !enKeys.has(key)).concat([...enKeys].filter((key) => !zhKeys.has(key)));
+if (onlyOne.length) fail('translation keys not in both languages: ' + onlyOne.join(', '));
+
 process.stdout.write('WebUI structure, theme, and control bindings passed.\n');
