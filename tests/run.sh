@@ -256,5 +256,6 @@ for script in "$ROOT"/*.sh "$ROOT"/META-INF/com/google/android/update-binary; do
 done
 node --check "$ROOT/webroot/app.js"
 node "$ROOT/tests/webui-check.js"
+node "$ROOT/tests/whitelist-roundtrip.js"
 echo "ok $((pass + 1)) - shell, JavaScript, and WebUI structure"
 echo "All $((pass + 1)) tests passed."

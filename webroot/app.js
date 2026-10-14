@@ -434,7 +434,7 @@ pm list packages -3 2>/dev/null | sed 's/^package://'
 echo "#SYS"
 pm list packages -s 2>/dev/null | sed 's/^package://'
 echo "#WL"
-cat /data/adb/deepdoze/whitelist 2>/dev/null
+cat /data/adb/deepdoze/whitelist 2>/dev/null; echo
 echo "#DIW"
 dumpsys deviceidle whitelist 2>/dev/null
 `.trim();
@@ -708,7 +708,7 @@ D=/data/adb/deepdoze; mkdir -p $D
     const pkgs = [...state.protected].filter((p) => PKG_RE.test(p) && !ESSENTIALS.has(p)).sort();
     const cmd = `
 D=/data/adb/deepdoze; mkdir -p $D
-printf '%s' ${shq(b64(pkgs.join('\n')))} | base64 -d > $D/whitelist && echo ok
+printf '%s' ${shq(b64(pkgs.map((p) => p + '\n').join('')))} | base64 -d > $D/whitelist && echo ok
 `.trim();
     const r = await exec(cmd);
     wlSaving = false;

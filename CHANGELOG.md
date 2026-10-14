@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+- Protected apps: the alphabetically last app no longer disappears from the list after reopening the WebUI (and is no longer dropped on the next save)
+
 ## v3.5.2
 
 ### WebUI
