@@ -1,7 +1,7 @@
 id=deepdoze_enforcer
 name=DeepDoze Enforcer
-version=v3.5.2
-versionCode=38
+version=v3.5.3
+versionCode=39
 author=skeler
 description=Conservative locked-screen battery savings with reversible Doze and optional app/CPU controls. For Magisk, KernelSU and APatch.
 minMagisk=24000

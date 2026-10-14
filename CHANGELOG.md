@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v3.5.3
 
 ### WebUI
 - Language picker next to the theme toggle: English, العربية, Deutsch, Français, हिन्दी, Português (Brasil), Русский, 中文 (Chinese/English by @cat-Logan, #9); follows the device language until you pick one
